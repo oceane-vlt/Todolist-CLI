@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package todo;
+
+option go_package = "github.com/oceane-vlt/todolist/proto/;todo";
+
+service TodoListService {
+    rpc CreateTodoList (CreateTodoListRequest) returns (CreateTodoListResponse){}
+    rpc GetTodoList (GetTodoListRequest) returns (GetTodoListResponse){}
+    // rpc UpdateTodoList (UpdateTodoListRequest) returns (UpdateTodoListResponse){}
+    // rpc DeleteTodoList (DeleteTodoListRequest) returns (DeleteTodoListResponse){}
+}
+
+message CreateTodoListRequest {
+    string title = 1;
+    string description = 2;
+    repeated string tasks = 3;
+}
+
+message CreateTodoListResponse {
+    int64 id = 1;
+}
+
+message GetTodoListRequest {
+    int64 id = 1;
+}
+
+message GetTodoListResponse {
+    int64 id = 1;
+    string title = 2;
+    string description = 3;
+    repeated string tasks = 4;
+}
