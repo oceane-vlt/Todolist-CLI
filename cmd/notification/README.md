@@ -4,7 +4,7 @@
 - [x] Create the function that generates the message.
 - [x] Print the message in main() using fmt.Println.
     - [x] Only for elements in the same list
-    - [ ] For elements from differents lists
+    - [x] For elements from differents lists
 - [ ] Build and install the binary (go install).
 
 ## AppleScript
