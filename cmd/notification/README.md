@@ -1,5 +1,10 @@
-# Notification Feature — To-Do List
+# Notification Feature
 
+This feature triggers a macOS notification every weekday at **10:30 AM (Europe/Paris time)**.
+A Go program generates a message, an AppleScript captures that message and displays it, and a `launchd` job schedules the execution automatically.
+
+---
+# Feature implementation Todos
 ## Go Program
 - [x] Create the function that generates the message.
 - [x] Print the message in main() using fmt.Println.
