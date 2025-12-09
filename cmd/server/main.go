@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	lis, err := net.Listen("tcp", ":8080")
+	lis, err := net.Listen("tcp", "127.0.0.1:50051")
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
@@ -20,7 +20,7 @@ func main() {
 
 	todo.RegisterTodoListServiceServer(grpcServer, &server.TodoListServer{})
 
-	log.Println("gRPC server listening on :8080")
+	log.Println("gRPC server listening on 127.0.0.1:50051")
 	if err := grpcServer.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}
