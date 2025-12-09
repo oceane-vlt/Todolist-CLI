@@ -10,7 +10,7 @@ A Go program generates a message, an AppleScript captures that message and displ
 - [x] Print the message in main() using fmt.Println.
     - [x] Only for elements in the same list
     - [x] For elements from differents lists
-- [ ] Build and install the binary (go install).
+- [x] Build and install the binary (go install).
 
 ## AppleScript
 - [ ] Write the AppleScript that executes the Go program.
