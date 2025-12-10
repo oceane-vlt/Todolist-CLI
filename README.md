@@ -24,29 +24,35 @@ The final result is a modular, extensible, and educational codebase demonstratin
 ---
 # Feature implementation Todos
 ## Project Setup
-- [ ] Initialize the Go module and project structure.
-- [ ] Create folders for server, client CLI, proto files, storage, and business logic.
+- [x] Initialize the Go module and project structure.
+- [x] Create folders for server, client CLI, proto files, storage, and business logic.
 
 ## gRPC API Design
-- [ ] Define the proto file for CRUD operations (lists and items).
-- [ ] Generate the gRPC server and client code.
-- [ ] Validate request/response messages and service layout.
+- [x] Define basic proto file for firsts CRUD operations (lists).
+- [x] Generate the gRPC server and client code.
+- [x] Define GetTodoLists RPC method to fetch list names.
+- [ ] Validate all request/response messages and service layout.
 
 ## Data Storage (JSON first)
-- [ ] Create a storage interface for todo list operations.
-- [ ] Implement JSON-based persistence (load/save to file).
-- [ ] Add basic validation and ID handling.
+- [x] Create JSON parsing functions to read todo data.
+- [x] Implement map-based structure for nested lists (map[string][]TodoItem).
+- [x] Add GetTodoListsTitles function to extract list names from JSON.
+- [ ] Implement full CRUD operations (create, update, delete).
+- [ ] Add ID generation and validation logic.
 
 ## Business Logic
-- [ ] Implement CRUD logic for lists and items.
-- [ ] Connect business logic with the JSON storage implementation.
-- [ ] Integrate business logic into gRPC service handlers.
+- [x] Implement GetTodoLists logic to return list names.
+- [x] Connect parsing logic with gRPC service handlers.
+- [ ] Implement full CRUD logic for lists and items.
+- [ ] Add business rules and validation.
 
 ## gRPC Server
-- [ ] Create the server executable (cmd/server).
-- [ ] Configure the server to listen on localhost (e.g., 127.0.0.1:50051).
-- [ ] Add server configuration (port, storage path).
-- [ ] Test the server manually by running it in a terminal.
+- [x] Create the server executable (cmd/server).
+- [x] Configure the server to listen on 127.0.0.1:50051.
+- [x] Implement GetTodoLists RPC handler.
+- [x] Test the server manually by running it in a terminal.
+- [ ] Add server configuration (storage path, logging).
+- [ ] Implement remaining RPC methods (Create, Update, Delete).
 
 ## launchd Integration
 - [ ] Create a launchd plist file to run the server at system startup.
@@ -55,14 +61,19 @@ The final result is a modular, extensible, and educational codebase demonstratin
 - [ ] Verify the server restarts automatically at reboot.
 
 ## CLI Client
-- [ ] Create the CLI structure (commands + subcommands).
-- [ ] Implement each command to call the gRPC server.
+- [x] Create the CLI structure with Cobra framework.
+- [x] Implement global gRPC client connection.
+- [x] Add 'list' command to fetch and display todo lists.
+- [ ] Implement remaining commands (create, update, delete, show).
 - [ ] Add formatting, error messages, and help text.
+- [ ] Improve CLI ergonomics and user experience.
 
 ## Testing
-- [ ] Test JSON storage directly.
-- [ ] Test gRPC methods individually.
+- [x] Add table-driven tests for JSON parsing logic.
+- [x] Test parseTodoListNames function with multiple scenarios.
+- [ ] Test gRPC methods individually with mock data.
 - [ ] Test CLI end-to-end with the running server.
+- [ ] Add integration tests.
 - [ ] Validate behavior on reboot with launchd active.
 
 ## Future Improvements
