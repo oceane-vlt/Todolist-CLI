@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/oceane-vlt/todolist/libs"
 	todo "github.com/oceane-vlt/todolist/proto"
 )
 
@@ -16,7 +17,15 @@ func (s *TodoListServer) CreateTodoList(context.Context, *todo.CreateTodoListReq
 	return nil, nil
 }
 
-func (s *TodoListServer) GetTodoList(context.Context, *todo.GetTodoListRequest) (*todo.GetTodoListResponse, error) {
-	fmt.Println("GetTodoList")
-	return nil, nil
+func (s *TodoListServer) GetTodoLists(context.Context, *todo.GetTodoListsRequest) (*todo.GetTodoListsResponse, error) {
+	fmt.Println("GetTodoLists called")
+
+	lists := libs.GetTodoListsTitles("./data/data.json")
+
+	res := &todo.GetTodoListsResponse{
+		Lists: lists,
+	}
+
+	return res, nil
+
 }

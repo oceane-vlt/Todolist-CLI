@@ -4,19 +4,24 @@ import (
 	"fmt"
 	"log"
 
+	todo "github.com/oceane-vlt/todolist/proto"
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-var rootCmd = &cobra.Command{
-	Use:   "todo",
-	Short: "todo cli",
-	Long:  `cli to manage yours todo lists`,
-	Run: func(cmd *cobra.Command, args []string) {
+var (
+	rootCmd = &cobra.Command{
+		Use:   "todo",
+		Short: "todo cli",
+		Long:  `cli to manage yours todo lists`,
+		Run: func(cmd *cobra.Command, args []string) {
 
-	},
-}
+		},
+	}
+
+	grpcClient todo.TodoListServiceClient
+)
 
 func execute() {
 	if err := rootCmd.Execute(); err != nil {
@@ -38,6 +43,8 @@ func main() {
 
 		}
 	}(conn)
+
+	grpcClient = todo.NewTodoListServiceClient(conn)
 
 	execute()
 }

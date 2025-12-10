@@ -2,11 +2,11 @@ syntax = "proto3";
 
 package todo;
 
-option go_package = "github.com/oceane-vlt/todolist/proto/;todo";
+option go_package = "github.com/oceane-vlt/todolist/proto;todo";
 
 service TodoListService {
     rpc CreateTodoList (CreateTodoListRequest) returns (CreateTodoListResponse){}
-    rpc GetTodoList (GetTodoListRequest) returns (GetTodoListResponse){}
+    rpc GetTodoLists (GetTodoListsRequest) returns (GetTodoListsResponse){}
     // rpc UpdateTodoList (UpdateTodoListRequest) returns (UpdateTodoListResponse){}
     // rpc DeleteTodoList (DeleteTodoListRequest) returns (DeleteTodoListResponse){}
 }
@@ -21,13 +21,9 @@ message CreateTodoListResponse {
     int64 id = 1;
 }
 
-message GetTodoListRequest {
-    int64 id = 1;
+message GetTodoListsRequest {
 }
 
-message GetTodoListResponse {
-    int64 id = 1;
-    string title = 2;
-    string description = 3;
-    repeated string tasks = 4;
+message GetTodoListsResponse {
+    repeated string lists = 1;
 }
