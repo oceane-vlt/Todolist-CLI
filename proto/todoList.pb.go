@@ -24,8 +24,7 @@ const (
 type CreateTodoListRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Title         string                 `protobuf:"bytes,1,opt,name=title,proto3" json:"title,omitempty"`
-	Description   string                 `protobuf:"bytes,2,opt,name=description,proto3" json:"description,omitempty"`
-	Tasks         []string               `protobuf:"bytes,3,rep,name=tasks,proto3" json:"tasks,omitempty"`
+	Item          []*Item                `protobuf:"bytes,3,rep,name=item,proto3" json:"item,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -67,30 +66,98 @@ func (x *CreateTodoListRequest) GetTitle() string {
 	return ""
 }
 
-func (x *CreateTodoListRequest) GetDescription() string {
+func (x *CreateTodoListRequest) GetItem() []*Item {
+	if x != nil {
+		return x.Item
+	}
+	return nil
+}
+
+type Item struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Title         string                 `protobuf:"bytes,1,opt,name=title,proto3" json:"title,omitempty"`
+	Description   string                 `protobuf:"bytes,2,opt,name=description,proto3" json:"description,omitempty"`
+	Completed     bool                   `protobuf:"varint,3,opt,name=completed,proto3" json:"completed,omitempty"`
+	DueDate       string                 `protobuf:"bytes,4,opt,name=dueDate,proto3" json:"dueDate,omitempty"`
+	Priority      string                 `protobuf:"bytes,5,opt,name=priority,proto3" json:"priority,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Item) Reset() {
+	*x = Item{}
+	mi := &file_proto_todoList_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Item) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Item) ProtoMessage() {}
+
+func (x *Item) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_todoList_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Item.ProtoReflect.Descriptor instead.
+func (*Item) Descriptor() ([]byte, []int) {
+	return file_proto_todoList_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *Item) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
+}
+
+func (x *Item) GetDescription() string {
 	if x != nil {
 		return x.Description
 	}
 	return ""
 }
 
-func (x *CreateTodoListRequest) GetTasks() []string {
+func (x *Item) GetCompleted() bool {
 	if x != nil {
-		return x.Tasks
+		return x.Completed
 	}
-	return nil
+	return false
+}
+
+func (x *Item) GetDueDate() string {
+	if x != nil {
+		return x.DueDate
+	}
+	return ""
+}
+
+func (x *Item) GetPriority() string {
+	if x != nil {
+		return x.Priority
+	}
+	return ""
 }
 
 type CreateTodoListResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *CreateTodoListResponse) Reset() {
 	*x = CreateTodoListResponse{}
-	mi := &file_proto_todoList_proto_msgTypes[1]
+	mi := &file_proto_todoList_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -102,7 +169,7 @@ func (x *CreateTodoListResponse) String() string {
 func (*CreateTodoListResponse) ProtoMessage() {}
 
 func (x *CreateTodoListResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_todoList_proto_msgTypes[1]
+	mi := &file_proto_todoList_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -115,14 +182,7 @@ func (x *CreateTodoListResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateTodoListResponse.ProtoReflect.Descriptor instead.
 func (*CreateTodoListResponse) Descriptor() ([]byte, []int) {
-	return file_proto_todoList_proto_rawDescGZIP(), []int{1}
-}
-
-func (x *CreateTodoListResponse) GetId() int64 {
-	if x != nil {
-		return x.Id
-	}
-	return 0
+	return file_proto_todoList_proto_rawDescGZIP(), []int{2}
 }
 
 type GetTodoListsRequest struct {
@@ -133,7 +193,7 @@ type GetTodoListsRequest struct {
 
 func (x *GetTodoListsRequest) Reset() {
 	*x = GetTodoListsRequest{}
-	mi := &file_proto_todoList_proto_msgTypes[2]
+	mi := &file_proto_todoList_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -145,7 +205,7 @@ func (x *GetTodoListsRequest) String() string {
 func (*GetTodoListsRequest) ProtoMessage() {}
 
 func (x *GetTodoListsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_todoList_proto_msgTypes[2]
+	mi := &file_proto_todoList_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -158,7 +218,7 @@ func (x *GetTodoListsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetTodoListsRequest.ProtoReflect.Descriptor instead.
 func (*GetTodoListsRequest) Descriptor() ([]byte, []int) {
-	return file_proto_todoList_proto_rawDescGZIP(), []int{2}
+	return file_proto_todoList_proto_rawDescGZIP(), []int{3}
 }
 
 type GetTodoListsResponse struct {
@@ -170,7 +230,7 @@ type GetTodoListsResponse struct {
 
 func (x *GetTodoListsResponse) Reset() {
 	*x = GetTodoListsResponse{}
-	mi := &file_proto_todoList_proto_msgTypes[3]
+	mi := &file_proto_todoList_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -182,7 +242,7 @@ func (x *GetTodoListsResponse) String() string {
 func (*GetTodoListsResponse) ProtoMessage() {}
 
 func (x *GetTodoListsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_todoList_proto_msgTypes[3]
+	mi := &file_proto_todoList_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -195,7 +255,7 @@ func (x *GetTodoListsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetTodoListsResponse.ProtoReflect.Descriptor instead.
 func (*GetTodoListsResponse) Descriptor() ([]byte, []int) {
-	return file_proto_todoList_proto_rawDescGZIP(), []int{3}
+	return file_proto_todoList_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *GetTodoListsResponse) GetLists() []string {
@@ -209,13 +269,18 @@ var File_proto_todoList_proto protoreflect.FileDescriptor
 
 const file_proto_todoList_proto_rawDesc = "" +
 	"\n" +
-	"\x14proto/todoList.proto\x12\x04todo\"e\n" +
+	"\x14proto/todoList.proto\x12\x04todo\"M\n" +
 	"\x15CreateTodoListRequest\x12\x14\n" +
+	"\x05title\x18\x01 \x01(\tR\x05title\x12\x1e\n" +
+	"\x04item\x18\x03 \x03(\v2\n" +
+	".todo.ItemR\x04item\"\x92\x01\n" +
+	"\x04Item\x12\x14\n" +
 	"\x05title\x18\x01 \x01(\tR\x05title\x12 \n" +
-	"\vdescription\x18\x02 \x01(\tR\vdescription\x12\x14\n" +
-	"\x05tasks\x18\x03 \x03(\tR\x05tasks\"(\n" +
-	"\x16CreateTodoListResponse\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\x03R\x02id\"\x15\n" +
+	"\vdescription\x18\x02 \x01(\tR\vdescription\x12\x1c\n" +
+	"\tcompleted\x18\x03 \x01(\bR\tcompleted\x12\x18\n" +
+	"\adueDate\x18\x04 \x01(\tR\adueDate\x12\x1a\n" +
+	"\bpriority\x18\x05 \x01(\tR\bpriority\"\x18\n" +
+	"\x16CreateTodoListResponse\"\x15\n" +
 	"\x13GetTodoListsRequest\",\n" +
 	"\x14GetTodoListsResponse\x12\x14\n" +
 	"\x05lists\x18\x01 \x03(\tR\x05lists2\xa9\x01\n" +
@@ -235,23 +300,25 @@ func file_proto_todoList_proto_rawDescGZIP() []byte {
 	return file_proto_todoList_proto_rawDescData
 }
 
-var file_proto_todoList_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_proto_todoList_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
 var file_proto_todoList_proto_goTypes = []any{
 	(*CreateTodoListRequest)(nil),  // 0: todo.CreateTodoListRequest
-	(*CreateTodoListResponse)(nil), // 1: todo.CreateTodoListResponse
-	(*GetTodoListsRequest)(nil),    // 2: todo.GetTodoListsRequest
-	(*GetTodoListsResponse)(nil),   // 3: todo.GetTodoListsResponse
+	(*Item)(nil),                   // 1: todo.Item
+	(*CreateTodoListResponse)(nil), // 2: todo.CreateTodoListResponse
+	(*GetTodoListsRequest)(nil),    // 3: todo.GetTodoListsRequest
+	(*GetTodoListsResponse)(nil),   // 4: todo.GetTodoListsResponse
 }
 var file_proto_todoList_proto_depIdxs = []int32{
-	0, // 0: todo.TodoListService.CreateTodoList:input_type -> todo.CreateTodoListRequest
-	2, // 1: todo.TodoListService.GetTodoLists:input_type -> todo.GetTodoListsRequest
-	1, // 2: todo.TodoListService.CreateTodoList:output_type -> todo.CreateTodoListResponse
-	3, // 3: todo.TodoListService.GetTodoLists:output_type -> todo.GetTodoListsResponse
-	2, // [2:4] is the sub-list for method output_type
-	0, // [0:2] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	1, // 0: todo.CreateTodoListRequest.item:type_name -> todo.Item
+	0, // 1: todo.TodoListService.CreateTodoList:input_type -> todo.CreateTodoListRequest
+	3, // 2: todo.TodoListService.GetTodoLists:input_type -> todo.GetTodoListsRequest
+	2, // 3: todo.TodoListService.CreateTodoList:output_type -> todo.CreateTodoListResponse
+	4, // 4: todo.TodoListService.GetTodoLists:output_type -> todo.GetTodoListsResponse
+	3, // [3:5] is the sub-list for method output_type
+	1, // [1:3] is the sub-list for method input_type
+	1, // [1:1] is the sub-list for extension type_name
+	1, // [1:1] is the sub-list for extension extendee
+	0, // [0:1] is the sub-list for field type_name
 }
 
 func init() { file_proto_todoList_proto_init() }
@@ -265,7 +332,7 @@ func file_proto_todoList_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_todoList_proto_rawDesc), len(file_proto_todoList_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   4,
+			NumMessages:   5,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

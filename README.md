@@ -44,6 +44,9 @@ The final result is a modular, extensible, and educational codebase demonstratin
 - [x] Implement GetTodoLists logic to return list names.
 - [x] Connect parsing logic with gRPC service handlers.
 - [ ] Implement full CRUD logic for lists and items.
+- [x] Easy implementation for **create** CRUD
+    - [ ] Enable create New list with elements
+    - [ ] Make sure I handle the case user want to create a list that already exist
 - [ ] Add business rules and validation.
 
 ## gRPC Server
