@@ -1,23 +1,23 @@
 package libs
 
 import (
-	todo "github.com/oceane-vlt/todolist/proto"
-	"fmt"
-	"os"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
+	"os"
+
+	todo "github.com/oceane-vlt/todolist/proto"
 )
 
-
-func CreateTodoList(path string, title string, items []*todo.Item) {
+func CreateTodoList(path string, title string, items []*todo.Item) error {
 	jsonFile, err := os.Open(path)
 	if err != nil {
 		fmt.Println(err)
-		return
+		return err
 	}
 	defer jsonFile.Close()
 
-	fmt.Printf("Successfully Opened %s", path)
+	fmt.Printf("Successfully Opened %s\n", path)
 
 	byteValue, _ := ioutil.ReadAll(jsonFile)
 
@@ -26,7 +26,12 @@ func CreateTodoList(path string, title string, items []*todo.Item) {
 	err = json.Unmarshal(byteValue, &todoData)
 	if err != nil {
 		fmt.Println("Error unmarshaling JSON:", err)
-		return
+		return err
+	}
+
+	_, exist := todoData.Lists[title]
+	if exist {
+		return fmt.Errorf("A todo list with named %s already exists.", title)
 	}
 
 	todoData.Lists[title] = []TodoItem{}
@@ -44,7 +49,8 @@ func CreateTodoList(path string, title string, items []*todo.Item) {
 	updatedData, err := json.MarshalIndent(todoData, "", "  ")
 	if err != nil {
 		fmt.Println("Error marshaling JSON:", err)
-		return
+		return err
 	}
 	ioutil.WriteFile(path, updatedData, 0644)
+	return nil
 }

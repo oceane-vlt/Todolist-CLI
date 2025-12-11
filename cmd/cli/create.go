@@ -21,12 +21,12 @@ var createCmd = &cobra.Command{
 			Item:  []*todo.Item{},
 		}
 
-		response, err := grpcClient.CreateTodoList(ctx, request)
+		_, err := grpcClient.CreateTodoList(ctx, request)
 		if err != nil {
 			log.Fatalf("Error calling CreateTodoList: %v", err)
 		}
 
-		fmt.Printf("Todo list created: %v\n", response)
+		fmt.Printf("Todo list created: %v\n", request.Title)
 	},
 }
 

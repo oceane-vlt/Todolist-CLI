@@ -26,6 +26,7 @@ The final result is a modular, extensible, and educational codebase demonstratin
 ## Project Setup
 - [x] Initialize the Go module and project structure.
 - [x] Create folders for server, client CLI, proto files, storage, and business logic.
+- [ ] Validate project structure.
 
 ## gRPC API Design
 - [x] Define basic proto file for firsts CRUD operations (lists).
@@ -47,6 +48,7 @@ The final result is a modular, extensible, and educational codebase demonstratin
 - [x] Easy implementation for **create** CRUD
     - [ ] Enable create New list with elements
     - [ ] Make sure I handle the case user want to create a list that already exist
+    - [ ] Remplace deprecated `ioutil.WriteFile` and `ioutil.ReadFile`
 - [ ] Add business rules and validation.
 
 ## gRPC Server

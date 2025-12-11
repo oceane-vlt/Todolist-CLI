@@ -16,7 +16,10 @@ type TodoListServer struct {
 func (s *TodoListServer) CreateTodoList(ctx context.Context, request *todo.CreateTodoListRequest) (*todo.CreateTodoListResponse, error) {
 	fmt.Println("CreateTodoList")
 
-	libs.CreateTodoList(path, request.Title, request.Item)
+	err := libs.CreateTodoList(path, request.Title, request.Item)
+	if err != nil {
+		return nil, err
+	}
 	res := &todo.CreateTodoListResponse{}
 	return res, nil
 }
