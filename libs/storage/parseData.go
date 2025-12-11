@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"io"
 	"os"
-)
 
+	todo "github.com/oceane-vlt/todolist/proto"
+)
 type TodoData struct {
 	Lists map[string][]TodoItem `json:"lists"`
 }
@@ -20,7 +21,7 @@ type TodoItem struct {
 	Priority    string `json:"priority"`
 }
 
-func GetTodoListsTitles(path string) []string {
+func GetTodoListsTitles(path string) []*todo.ListSize {
 	jsonFile, err := os.Open(path)
 	if err != nil {
 		fmt.Println(err)
@@ -39,7 +40,7 @@ func GetTodoListsTitles(path string) []string {
 	return parseTodoListNames(bytesData)
 }
 
-func parseTodoListNames(jsonData []byte) []string {
+func parseTodoListNames(jsonData []byte) []*todo.ListSize {
 	var todoData TodoData
 
 	err := json.Unmarshal(jsonData, &todoData)
@@ -48,12 +49,16 @@ func parseTodoListNames(jsonData []byte) []string {
 		return nil
 	}
 
-	// Extract list names (keys of the map)
-	var listNames []string
+	res := []*todo.ListSize{}
+
 	for listName := range todoData.Lists {
-		listNames = append(listNames, listName)
-		fmt.Println("Found list:", listName)
+		list := todo.ListSize{
+			Title: listName,
+			Size:  int32(len(todoData.Lists[listName])),
+		}
+		res = append(res, &list)
+		fmt.Printf("Found list:%s size:%d\n", list.Title, list.Size)
 	}
 
-	return listNames
+	return res
 }

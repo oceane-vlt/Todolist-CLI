@@ -1,16 +1,15 @@
-package storage 
+package storage
 
 import (
-	"reflect"
 	"testing"
 )
 
 func TestParseTodoListNames(t *testing.T) {
 	tests := []struct {
-		name           string
-		jsonContent    string
-		expectedLists  []string
-		expectError    bool
+		name            string
+		jsonContent     string
+		expectedLists   map[string]int32 // title -> size
+		expectError     bool
 		checkExactOrder bool
 	}{
 		{
@@ -49,21 +48,25 @@ func TestParseTodoListNames(t *testing.T) {
 					]
 				}
 			}`,
-			expectedLists: []string{"work", "personal", "learning"},
-			expectError:    false,
-			checkExactOrder: false, // Map iteration order is not guaranteed
+			expectedLists: map[string]int32{
+				"work":     1,
+				"personal": 1,
+				"learning": 1,
+			},
+			expectError:     false,
+			checkExactOrder: false,
 		},
 		{
 			name: "empty lists object",
 			jsonContent: `{
 				"lists": {}
 			}`,
-			expectedLists: []string{},
-			expectError:    false,
+			expectedLists:   map[string]int32{},
+			expectError:     false,
 			checkExactOrder: true,
 		},
 		{
-			name: "single list",
+			name: "single list with multiple items",
 			jsonContent: `{
 				"lists": {
 					"work": [
@@ -74,16 +77,26 @@ func TestParseTodoListNames(t *testing.T) {
 							"completed": false,
 							"dueDate": "2024-01-15",
 							"priority": "high"
+						},
+						{
+							"id": 2,
+							"title": "Task 2",
+							"description": "Another task",
+							"completed": false,
+							"dueDate": "2024-01-16",
+							"priority": "low"
 						}
 					]
 				}
 			}`,
-			expectedLists: []string{"work"},
-			expectError:    false,
+			expectedLists: map[string]int32{
+				"work": 2,
+			},
+			expectError:     false,
 			checkExactOrder: true,
 		},
 		{
-			name: "multiple list categories",
+			name: "multiple list categories with empty lists",
 			jsonContent: `{
 				"lists": {
 					"urgent": [],
@@ -91,8 +104,12 @@ func TestParseTodoListNames(t *testing.T) {
 					"completed": []
 				}
 			}`,
-			expectedLists: []string{"urgent", "backlog", "completed"},
-			expectError:    false,
+			expectedLists: map[string]int32{
+				"urgent":    0,
+				"backlog":   0,
+				"completed": 0,
+			},
+			expectError:     false,
 			checkExactOrder: false,
 		},
 	}
@@ -100,48 +117,46 @@ func TestParseTodoListNames(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Call the parsing function directly with JSON data
-			titles := parseTodoListNames([]byte(tt.jsonContent))
+			result := parseTodoListNames([]byte(tt.jsonContent))
 
 			// Verify results
 			if tt.expectError {
-				if titles != nil && len(titles) > 0 {
-					t.Errorf("Expected error or nil, but got list names: %v", titles)
+				if len(result) > 0 {
+					t.Errorf("Expected error or nil, but got list: %v", result)
 				}
 				return
 			}
 
-			if titles == nil {
+			if result == nil {
 				if len(tt.expectedLists) == 0 {
 					// nil is acceptable for empty expected lists
 					return
 				}
-				t.Errorf("Expected list names %v, but got nil", tt.expectedLists)
+				t.Errorf("Expected lists %v, but got nil", tt.expectedLists)
 				return
 			}
 
 			// Check length
-			if len(titles) != len(tt.expectedLists) {
-				t.Errorf("Expected %d list names, got %d. Expected: %v, Got: %v",
-					len(tt.expectedLists), len(titles), tt.expectedLists, titles)
+			if len(result) != len(tt.expectedLists) {
+				t.Errorf("Expected %d lists, got %d", len(tt.expectedLists), len(result))
 				return
 			}
 
-			// If exact order matters, use DeepEqual
-			if tt.checkExactOrder {
-				if !reflect.DeepEqual(titles, tt.expectedLists) {
-					t.Errorf("Expected list names %v, got %v", tt.expectedLists, titles)
-				}
-			} else {
-				// If order doesn't matter, check that all expected lists are present
-				titleMap := make(map[string]bool)
-				for _, title := range titles {
-					titleMap[title] = true
-				}
+			// Build a map from result for easy comparison
+			resultMap := make(map[string]int32)
+			for _, listSize := range result {
+				resultMap[listSize.Title] = listSize.Size
+			}
 
-				for _, expected := range tt.expectedLists {
-					if !titleMap[expected] {
-						t.Errorf("Expected list name '%s' not found in result: %v", expected, titles)
-					}
+			// Verify each expected list
+			for expectedTitle, expectedSize := range tt.expectedLists {
+				actualSize, found := resultMap[expectedTitle]
+				if !found {
+					t.Errorf("Expected list '%s' not found in result", expectedTitle)
+					continue
+				}
+				if actualSize != expectedSize {
+					t.Errorf("List '%s': expected size %d, got %d", expectedTitle, expectedSize, actualSize)
 				}
 			}
 		})

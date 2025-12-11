@@ -21,7 +21,7 @@ var listCmd = &cobra.Command{
 		}
 
 		for _, list := range response.Lists{
-			fmt.Printf("- %s\n", list)
+			fmt.Printf("- %s, size: %d\n", list.Title, list.Size)
 		}
 
 	},

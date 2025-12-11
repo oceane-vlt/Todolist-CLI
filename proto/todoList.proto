@@ -31,5 +31,10 @@ message GetTodoListsRequest {
 }
 
 message GetTodoListsResponse {
-    repeated string lists = 1;
+    repeated ListSize lists = 1;
+}
+
+message ListSize {
+    string title = 1;
+    int32 size = 2;
 }
