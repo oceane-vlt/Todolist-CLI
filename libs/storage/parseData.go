@@ -1,9 +1,9 @@
-package libs
+package storage
 
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 )
 
@@ -30,7 +30,7 @@ func GetTodoListsTitles(path string) []string {
 
 	fmt.Println("Successfully Opened data.json")
 
-	bytesData, err := ioutil.ReadAll(jsonFile)
+	bytesData, err := io.ReadAll(jsonFile)
 	if err != nil {
 		fmt.Println("Error reading file:", err)
 		return nil

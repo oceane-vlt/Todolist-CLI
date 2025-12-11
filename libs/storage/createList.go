@@ -1,9 +1,9 @@
-package libs
+package storage
 
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 
 	todo "github.com/oceane-vlt/todolist/proto"
@@ -19,7 +19,7 @@ func CreateTodoList(path string, title string, items []*todo.Item) error {
 
 	fmt.Printf("Successfully Opened %s\n", path)
 
-	byteValue, _ := ioutil.ReadAll(jsonFile)
+	byteValue, _ := io.ReadAll(jsonFile)
 
 	var todoData TodoData
 
@@ -31,7 +31,7 @@ func CreateTodoList(path string, title string, items []*todo.Item) error {
 
 	_, exist := todoData.Lists[title]
 	if exist {
-		return fmt.Errorf("A todo list with named %s already exists.", title)
+		return fmt.Errorf("a todo list named %s already exists", title)
 	}
 
 	todoData.Lists[title] = []TodoItem{}
@@ -51,6 +51,8 @@ func CreateTodoList(path string, title string, items []*todo.Item) error {
 		fmt.Println("Error marshaling JSON:", err)
 		return err
 	}
-	ioutil.WriteFile(path, updatedData, 0644)
+	if err := os.WriteFile(path, updatedData, 0644); err != nil {
+		return fmt.Errorf("failed to write file: %w", err)
+	}
 	return nil
 }

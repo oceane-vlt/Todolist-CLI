@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/oceane-vlt/todolist/libs"
+	"github.com/oceane-vlt/todolist/libs/storage"
 	todo "github.com/oceane-vlt/todolist/proto"
 )
 
@@ -16,7 +16,7 @@ type TodoListServer struct {
 func (s *TodoListServer) CreateTodoList(ctx context.Context, request *todo.CreateTodoListRequest) (*todo.CreateTodoListResponse, error) {
 	fmt.Println("CreateTodoList")
 
-	err := libs.CreateTodoList(path, request.Title, request.Item)
+	err := storage.CreateTodoList(path, request.Title, request.Item)
 	if err != nil {
 		return nil, err
 	}
@@ -27,7 +27,7 @@ func (s *TodoListServer) CreateTodoList(ctx context.Context, request *todo.Creat
 func (s *TodoListServer) GetTodoLists(context.Context, *todo.GetTodoListsRequest) (*todo.GetTodoListsResponse, error) {
 	fmt.Println("GetTodoLists called")
 
-	lists := libs.GetTodoListsTitles(path)
+	lists := storage.GetTodoListsTitles(path)
 
 	res := &todo.GetTodoListsResponse{
 		Lists: lists,
