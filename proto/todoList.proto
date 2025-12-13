@@ -8,7 +8,15 @@ service TodoListService {
     rpc CreateTodoList (CreateTodoListRequest) returns (CreateTodoListResponse){}
     rpc GetTodoLists (GetTodoListsRequest) returns (GetTodoListsResponse){}
     // rpc UpdateTodoList (UpdateTodoListRequest) returns (UpdateTodoListResponse){}
-    // rpc DeleteTodoList (DeleteTodoListRequest) returns (DeleteTodoListResponse){}
+    rpc DeleteTodoList (DeleteTodoListRequest) returns (DeleteTodoListResponse){}
+    // rpc DeleteTodoListItem (DeleteTodoListItemRequest) returns (DeleteTodoListItemResponse){}
+}
+
+message DeleteTodoListRequest {
+    string title = 1;
+}
+
+message DeleteTodoListResponse {
 }
 
 message CreateTodoListRequest {

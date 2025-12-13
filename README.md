@@ -46,9 +46,17 @@ The final result is a modular, extensible, and educational codebase demonstratin
 - [x] Connect parsing logic with gRPC service handlers.
 - [ ] Implement full CRUD logic for lists and items.
 - [x] Easy implementation for **create** CRUD
-    - [ ] Enable create New list with elements
-    - [ ] Make sure I handle the case user want to create a list that already exist
-    - [ ] Remplace deprecated `ioutil.WriteFile` and `ioutil.ReadFile`
+    - [x] Enable Create New list with elements
+        - [ ] Create with *interactive* mode (add details in each item)
+        - [ ] Display the list once created
+    - [x] Implement *Read* method
+    - [ ] Implement *Delete* method
+        - [ ] Delete with the title of the list -> if the list don't exist -> Display the existing todo lists
+        - [ ] [optional] Delete with a list of title if -> if a list doesn't exist -> Display the existing todo lists
+        - [ ] Delete without the title -> Display the list of todo lists
+    - [ ] Implement *Update* method
+    - [x] Make sure I handle the case user want to create a list that already exist
+    - [x] Remplace deprecated `ioutil.WriteFile` and `ioutil.ReadFile`
 - [ ] Add business rules and validation.
 
 ## gRPC Server

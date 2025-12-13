@@ -8,18 +8,7 @@ import (
 
 	todo "github.com/oceane-vlt/todolist/proto"
 )
-type TodoData struct {
-	Lists map[string][]TodoItem `json:"lists"`
-}
 
-type TodoItem struct {
-	Id          int    `json:"id"`
-	Title       string `json:"title"`
-	Description string `json:"description"`
-	Completed   bool   `json:"completed"`
-	DueDate     string `json:"dueDate"`
-	Priority    string `json:"priority"`
-}
 
 func GetTodoListsTitles(path string) []*todo.ListSize {
 	jsonFile, err := os.Open(path)
