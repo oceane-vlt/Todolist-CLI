@@ -19,9 +19,10 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	TodoListService_CreateTodoList_FullMethodName = "/todo.TodoListService/CreateTodoList"
-	TodoListService_GetTodoLists_FullMethodName   = "/todo.TodoListService/GetTodoLists"
-	TodoListService_DeleteTodoList_FullMethodName = "/todo.TodoListService/DeleteTodoList"
+	TodoListService_CreateTodoList_FullMethodName    = "/todo.TodoListService/CreateTodoList"
+	TodoListService_GetTodoLists_FullMethodName      = "/todo.TodoListService/GetTodoLists"
+	TodoListService_ShowTodoListItems_FullMethodName = "/todo.TodoListService/ShowTodoListItems"
+	TodoListService_DeleteTodoList_FullMethodName    = "/todo.TodoListService/DeleteTodoList"
 )
 
 // TodoListServiceClient is the client API for TodoListService service.
@@ -30,7 +31,7 @@ const (
 type TodoListServiceClient interface {
 	CreateTodoList(ctx context.Context, in *CreateTodoListRequest, opts ...grpc.CallOption) (*CreateTodoListResponse, error)
 	GetTodoLists(ctx context.Context, in *GetTodoListsRequest, opts ...grpc.CallOption) (*GetTodoListsResponse, error)
-	// rpc UpdateTodoList (UpdateTodoListRequest) returns (UpdateTodoListResponse){}
+	ShowTodoListItems(ctx context.Context, in *ShowTodoListItemsRequest, opts ...grpc.CallOption) (*ShowTodoListItemsResponse, error)
 	DeleteTodoList(ctx context.Context, in *DeleteTodoListRequest, opts ...grpc.CallOption) (*DeleteTodoListResponse, error)
 }
 
@@ -62,6 +63,16 @@ func (c *todoListServiceClient) GetTodoLists(ctx context.Context, in *GetTodoLis
 	return out, nil
 }
 
+func (c *todoListServiceClient) ShowTodoListItems(ctx context.Context, in *ShowTodoListItemsRequest, opts ...grpc.CallOption) (*ShowTodoListItemsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ShowTodoListItemsResponse)
+	err := c.cc.Invoke(ctx, TodoListService_ShowTodoListItems_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *todoListServiceClient) DeleteTodoList(ctx context.Context, in *DeleteTodoListRequest, opts ...grpc.CallOption) (*DeleteTodoListResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(DeleteTodoListResponse)
@@ -78,7 +89,7 @@ func (c *todoListServiceClient) DeleteTodoList(ctx context.Context, in *DeleteTo
 type TodoListServiceServer interface {
 	CreateTodoList(context.Context, *CreateTodoListRequest) (*CreateTodoListResponse, error)
 	GetTodoLists(context.Context, *GetTodoListsRequest) (*GetTodoListsResponse, error)
-	// rpc UpdateTodoList (UpdateTodoListRequest) returns (UpdateTodoListResponse){}
+	ShowTodoListItems(context.Context, *ShowTodoListItemsRequest) (*ShowTodoListItemsResponse, error)
 	DeleteTodoList(context.Context, *DeleteTodoListRequest) (*DeleteTodoListResponse, error)
 	mustEmbedUnimplementedTodoListServiceServer()
 }
@@ -95,6 +106,9 @@ func (UnimplementedTodoListServiceServer) CreateTodoList(context.Context, *Creat
 }
 func (UnimplementedTodoListServiceServer) GetTodoLists(context.Context, *GetTodoListsRequest) (*GetTodoListsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetTodoLists not implemented")
+}
+func (UnimplementedTodoListServiceServer) ShowTodoListItems(context.Context, *ShowTodoListItemsRequest) (*ShowTodoListItemsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ShowTodoListItems not implemented")
 }
 func (UnimplementedTodoListServiceServer) DeleteTodoList(context.Context, *DeleteTodoListRequest) (*DeleteTodoListResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteTodoList not implemented")
@@ -156,6 +170,24 @@ func _TodoListService_GetTodoLists_Handler(srv interface{}, ctx context.Context,
 	return interceptor(ctx, in, info, handler)
 }
 
+func _TodoListService_ShowTodoListItems_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ShowTodoListItemsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TodoListServiceServer).ShowTodoListItems(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: TodoListService_ShowTodoListItems_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TodoListServiceServer).ShowTodoListItems(ctx, req.(*ShowTodoListItemsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _TodoListService_DeleteTodoList_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(DeleteTodoListRequest)
 	if err := dec(in); err != nil {
@@ -188,6 +220,10 @@ var TodoListService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetTodoLists",
 			Handler:    _TodoListService_GetTodoLists_Handler,
+		},
+		{
+			MethodName: "ShowTodoListItems",
+			Handler:    _TodoListService_ShowTodoListItems_Handler,
 		},
 		{
 			MethodName: "DeleteTodoList",

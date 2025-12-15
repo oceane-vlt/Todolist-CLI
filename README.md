@@ -44,19 +44,17 @@ The final result is a modular, extensible, and educational codebase demonstratin
 ## Business Logic
 - [x] Implement GetTodoLists logic to return list names.
 - [x] Connect parsing logic with gRPC service handlers.
-- [ ] Implement full CRUD logic for lists and items.
-- [x] Easy implementation for **create** CRUD
-    - [x] Enable Create New list with elements
-        - [ ] Create with *interactive* mode (add details in each item)
-        - [ ] Display the list once created
+- [x] **Easy** implementation for all CRUD
+    - [x] Implement *Create* method
+        - [x] Enable Create New list with elements
     - [x] Implement *Read* method
-    - [ ] Implement *Delete* method
-        - [ ] Delete with the title of the list -> if the list don't exist -> Display the existing todo lists
-        - [ ] [optional] Delete with a list of title if -> if a list doesn't exist -> Display the existing todo lists
-        - [ ] Delete without the title -> Display the list of todo lists
+        - [x] Return the existing todo lists
+        - [x] Return the items in a certain todo list       
     - [ ] Implement *Update* method
-    - [x] Make sure I handle the case user want to create a list that already exist
-    - [x] Remplace deprecated `ioutil.WriteFile` and `ioutil.ReadFile`
+    - [ ] Implement *Delete* method
+        - [x] Delete an entire list
+        - [ ] Delete items in a list
+- [x] Remplace deprecated `ioutil.WriteFile` and `ioutil.ReadFile`
 - [ ] Add business rules and validation.
 
 ## gRPC Server
@@ -80,6 +78,17 @@ The final result is a modular, extensible, and educational codebase demonstratin
 - [ ] Implement remaining commands (create, update, delete, show).
 - [ ] Add formatting, error messages, and help text.
 - [ ] Improve CLI ergonomics and user experience.
+- Improvement in CLI commands:
+    - CREATE
+        - [x] Make sure I handle the case user want to create a list that already exist
+        - [ ] [optional] Create with *interactive* mode (add details in each item)
+        - [ ] Display the list once created
+    - SHOW
+        - [ ] *Show* command with no arguments should display the existing todo lists and ask the user to enter the list he want to view
+    - DELETE
+        - [ ] Delete with the title of the list -> if the list don't exist -> Display the existing todo lists
+        - [ ] [optional] Delete with a list of title if -> if a list doesn't exist -> Display the existing todo lists
+        - [ ] Delete without the title -> Display the list of todo lists
 
 ## Testing
 - [x] Add table-driven tests for JSON parsing logic.

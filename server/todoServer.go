@@ -47,3 +47,17 @@ func (s *TodoListServer) DeleteTodoList(ctx context.Context, request *todo.Delet
 	res := &todo.DeleteTodoListResponse{}
 	return res, nil
 }
+
+func (s *TodoListServer) ShowTodoListItems(ctx context.Context, request *todo.ShowTodoListItemsRequest) (*todo.ShowTodoListItemsResponse, error) {
+		fmt.Println("ShowTodoListItems called")
+
+		items, err := storage.ShowTodoListItems(path, request.Title)
+		if err != nil {
+			return nil, err
+		}
+
+		res := &todo.ShowTodoListItemsResponse{
+			Items: items,
+		}
+		return res, nil
+}
