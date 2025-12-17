@@ -50,10 +50,10 @@ The final result is a modular, extensible, and educational codebase demonstratin
     - [x] Implement *Read* method
         - [x] Return the existing todo lists
         - [x] Return the items in a certain todo list       
-    - [ ] Implement *Update* method
-    - [ ] Implement *Delete* method
+    - [ ] Implement *Update* method (add items in a list)
+    - [x] Implement *Delete* method
         - [x] Delete an entire list
-        - [ ] Delete items in a list
+        - [x] Delete items in a list
 - [x] Remplace deprecated `ioutil.WriteFile` and `ioutil.ReadFile`
 - [ ] Add business rules and validation.
 
@@ -89,6 +89,8 @@ The final result is a modular, extensible, and educational codebase demonstratin
         - [ ] Delete with the title of the list -> if the list don't exist -> Display the existing todo lists
         - [ ] [optional] Delete with a list of title if -> if a list doesn't exist -> Display the existing todo lists
         - [ ] Delete without the title -> Display the list of todo lists
+    - COMPLETE
+        - [ ] Show the updated list once the items have been deleted
 
 ## Testing
 - [x] Add table-driven tests for JSON parsing logic.

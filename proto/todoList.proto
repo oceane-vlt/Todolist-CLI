@@ -9,8 +9,14 @@ service TodoListService {
     rpc GetTodoLists (GetTodoListsRequest) returns (GetTodoListsResponse){}
     rpc ShowTodoListItems (ShowTodoListItemsRequest) returns (ShowTodoListItemsResponse){}
     rpc DeleteTodoList (DeleteTodoListRequest) returns (DeleteTodoListResponse){}
-    // rpc DeleteTodoListItem (DeleteTodoListItemRequest) returns (DeleteTodoListItemResponse){}
+    rpc DeleteTodoListItems (DeleteTodoListItemsRequest) returns (DeleteTodoListItemsResponse){}
     // rpc UpdateTodoList (UpdateTodoListRequest) returns (UpdateTodoListResponse){}
+}
+message DeleteTodoListItemsRequest {
+    string title = 1;
+    repeated int32 item_indexes = 2;
+}
+message DeleteTodoListItemsResponse {
 }
 
 message ShowTodoListItemsRequest {
