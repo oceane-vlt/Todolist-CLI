@@ -8,19 +8,14 @@ import (
 	todo "github.com/oceane-vlt/todolist/proto"
 )
 
-func updateData(data *TodoData, title string, newItems []*todo.Item) ([]TodoItem, error) {
-	list, exist := data.Lists[title]
-	if !exist {
-		return nil, fmt.Errorf("list %s don't exist", title)
-	}
-
+func updateData(listToUpdate []TodoItem, newItems []*todo.Item) ([]TodoItem, error) {
 	for _, item := range newItems {
 		todoItem := TodoItem{
 			Title: item.Title,
 		}
-		list = append(list, todoItem)
+		listToUpdate = append(listToUpdate, todoItem)
 	}
-	return list, nil
+	return listToUpdate, nil
 }
 
 func UpdateTodoListData(dataPath, title string, newItems []*todo.Item) error {
@@ -29,7 +24,11 @@ func UpdateTodoListData(dataPath, title string, newItems []*todo.Item) error {
 		log.Fatal(err)
 	}
 
-	updatedList, err := updateData(data, title, newItems)
+	list, exist := data.Lists[title]
+	if !exist {
+		return fmt.Errorf("list %s don't exist", title)
+	}
+	updatedList, err := updateData(list, newItems)
 	if err != nil{
 		return err
 	}
