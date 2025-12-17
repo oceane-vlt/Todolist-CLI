@@ -3,7 +3,7 @@
 # Data files
 data/data.json
 
-# Compiled binaries
-todo
-server
+# Compiled binaries (only at root)
+/todo
+/server
 server/server
