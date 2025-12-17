@@ -21,7 +21,6 @@ func deleteItems(items []TodoItem, indicesToDelete []int32) []TodoItem {
 	return updatedItems
 }
 
-
 func DeleteTodoListItems(dataPath, title string, indicesToDelete []int32) error {
 	todoData, err := ReadTodoData(dataPath)
 	if err != nil {

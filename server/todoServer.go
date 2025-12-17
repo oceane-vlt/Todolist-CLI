@@ -3,12 +3,42 @@ package server
 import (
 	"context"
 	"fmt"
+	"log"
+	"os"
+	"path/filepath"
 
 	"github.com/oceane-vlt/todolist/libs/storage"
 	todo "github.com/oceane-vlt/todolist/proto"
 )
 
-var path = "./data/data.json"
+var path string
+
+func init() {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		log.Fatalf("Failed to get user home directory: %v", err)
+	}
+
+	// Créer le dossier de config s'il n'existe pas
+	configDir := filepath.Join(home, ".config", "todolist")
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		log.Fatalf("Failed to create config directory: %v", err)
+	}
+
+	path = filepath.Join(configDir, "data.json")
+
+	// Si le fichier n'existe pas, créer un fichier vide avec structure de base
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		initialData := []byte(`{"lists":{}}`)
+		if err := os.WriteFile(path, initialData, 0644); err != nil {
+			log.Fatalf("Failed to create initial data file: %v", err)
+		}
+		log.Printf("Created initial data file at: %s", path)
+	}
+
+	log.Printf("Using data file: %s", path)
+}
+
 type TodoListServer struct {
 	todo.UnimplementedTodoListServiceServer
 }
@@ -49,17 +79,17 @@ func (s *TodoListServer) DeleteTodoList(ctx context.Context, request *todo.Delet
 }
 
 func (s *TodoListServer) ShowTodoListItems(ctx context.Context, request *todo.ShowTodoListItemsRequest) (*todo.ShowTodoListItemsResponse, error) {
-		fmt.Println("ShowTodoListItems called")
+	fmt.Println("ShowTodoListItems called")
 
-		items, err := storage.ShowTodoListItems(path, request.Title)
-		if err != nil {
-			return nil, err
-		}
+	items, err := storage.ShowTodoListItems(path, request.Title)
+	if err != nil {
+		return nil, err
+	}
 
-		res := &todo.ShowTodoListItemsResponse{
-			Items: items,
-		}
-		return res, nil
+	res := &todo.ShowTodoListItemsResponse{
+		Items: items,
+	}
+	return res, nil
 }
 
 func (s *TodoListServer) DeleteTodoListItems(ctx context.Context, request *todo.DeleteTodoListItemsRequest) (*todo.DeleteTodoListItemsResponse, error) {

@@ -20,7 +20,7 @@ func updateData(listToUpdate []TodoItem, newItems []*todo.Item) ([]TodoItem, err
 
 func UpdateTodoListData(dataPath, title string, newItems []*todo.Item) error {
 	data, err := ReadTodoData(dataPath)
-	if err != nil{
+	if err != nil {
 		log.Fatal(err)
 	}
 
@@ -29,19 +29,19 @@ func UpdateTodoListData(dataPath, title string, newItems []*todo.Item) error {
 		return fmt.Errorf("list %s don't exist", title)
 	}
 	updatedList, err := updateData(list, newItems)
-	if err != nil{
+	if err != nil {
 		return err
 	}
 
 	data.Lists[title] = updatedList
 
 	updatedData, err := json.MarshalIndent(data, "", " ")
-	if err != nil{
+	if err != nil {
 		return err
 	}
 
 	err = WriteTodoData(dataPath, updatedData)
-	if err != nil{
+	if err != nil {
 		return err
 	}
 

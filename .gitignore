@@ -2,3 +2,8 @@
 
 # Data files
 data/data.json
+
+# Compiled binaries
+todo
+server
+server/server

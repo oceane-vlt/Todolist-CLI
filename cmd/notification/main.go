@@ -4,13 +4,13 @@ import (
 	"fmt"
 )
 
-type todoElement struct{
-	ID int
-	List string
+type todoElement struct {
+	ID    int
+	List  string
 	Value string
 }
 
-func getElements() []todoElement{
+func getElements() []todoElement {
 	todoElements := []todoElement{
 		{
 			ID:    1,
@@ -67,29 +67,29 @@ func getElements() []todoElement{
 	return todoElements
 }
 
-func outputMap(catagory string, todoElements []todoElement) string{
+func outputMap(catagory string, todoElements []todoElement) string {
 	output := fmt.Sprintf("You have %d elements in the %s catagory\n", len(todoElements), catagory)
 
-	for _, todoElm := range todoElements{
-		output += fmt.Sprintf(" - %s\n", todoElm.Value)	
+	for _, todoElm := range todoElements {
+		output += fmt.Sprintf(" - %s\n", todoElm.Value)
 	}
-	
+
 	return output
-	
+
 }
 func prettyOutput(todoElements []todoElement) string {
 	output := "Your Amazing Todolist\n"
 	elemByCat := make(map[string][]todoElement)
-	for _, todoElm := range todoElements{
-			elemByCat[todoElm.List] = append(elemByCat[todoElm.List], todoElm)
+	for _, todoElm := range todoElements {
+		elemByCat[todoElm.List] = append(elemByCat[todoElm.List], todoElm)
 	}
-	for c, elms := range elemByCat{
+	for c, elms := range elemByCat {
 		output += outputMap(c, elms)
 	}
 	return output
 }
 
-func main () {
+func main() {
 	todoElements := getElements()
 	formatRes := prettyOutput(todoElements)
 	fmt.Println(formatRes)

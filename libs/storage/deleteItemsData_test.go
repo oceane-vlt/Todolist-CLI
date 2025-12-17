@@ -7,10 +7,10 @@ import (
 
 func TestDeleteItems(t *testing.T) {
 	tests := []struct {
-		name             string
-		items            []TodoItem
-		indicesToDelete  []int32
-		expectedResult   []TodoItem
+		name            string
+		items           []TodoItem
+		indicesToDelete []int32
+		expectedResult  []TodoItem
 	}{
 		{
 			name: "delete single item from middle",

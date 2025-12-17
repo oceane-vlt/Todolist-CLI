@@ -9,7 +9,6 @@ import (
 	todo "github.com/oceane-vlt/todolist/proto"
 )
 
-
 func GetTodoListsTitles(path string) []*todo.ListSize {
 	jsonFile, err := os.Open(path)
 	if err != nil {

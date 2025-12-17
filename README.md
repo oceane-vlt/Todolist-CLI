@@ -21,6 +21,9 @@ This project is designed to explore and learn:
 
 The final result is a modular, extensible, and educational codebase demonstrating how to structure a real-world Go application using gRPC.
 
+
+the data file will be located in *~/.config/todolist/data.json*
+
 ---
 # Feature implementation Todos
 ## Project Setup

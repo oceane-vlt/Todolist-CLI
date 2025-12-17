@@ -6,7 +6,7 @@ import (
 )
 
 func DeleteTodoList(dataPath string, title string) error {
-	
+
 	todoData, err := ReadTodoData(dataPath)
 	if err != nil {
 		return err
