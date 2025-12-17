@@ -85,12 +85,14 @@ The final result is a modular, extensible, and educational codebase demonstratin
         - [ ] Display the list once created
     - SHOW
         - [ ] *Show* command with no arguments should display the existing todo lists and ask the user to enter the list he want to view
+        - [ ] Add a verbose option to display only the title or no
     - DELETE
         - [ ] Delete with the title of the list -> if the list don't exist -> Display the existing todo lists
         - [ ] [optional] Delete with a list of title if -> if a list doesn't exist -> Display the existing todo lists
         - [ ] Delete without the title -> Display the list of todo lists
     - COMPLETE
         - [ ] Show the updated list once the items have been deleted
+        - [ ] If the index doesn't exist -> ask again to the user
     - UPDATE
         - [ ] If the user don't add the new items as arguments of the command -> ask the user the add the elements he want -> scan stdin -> call updateItem witht the scaned list
         - [ ] Print the list once updated

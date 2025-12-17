@@ -28,13 +28,20 @@ var showCmd = &cobra.Command{
 		}
 
 		fmt.Printf("Items in todo list: %v\n", request.Title)
-		for _, item := range response.Items {
-			fmt.Printf("- %s (Description: %s, Completed: %v, DueDate: %s, Priority: %s)\n",
-				item.Title, item.Description, item.Completed, item.DueDate, item.Priority)
+		if verbose, _ := cmd.Flags().GetBool("verbose"); verbose {
+			for _, item := range response.Items {
+				fmt.Printf("- %s (Description: %s, Completed: %v, DueDate: %s, Priority: %s)\n",
+					item.Title, item.Description, item.Completed, item.DueDate, item.Priority)
+			}
+		} else {
+			for _, item := range response.Items {
+				fmt.Printf("- %s\n", item.Title)
+			}
 		}
 	},
 }
 
 func init() {
+	showCmd.Flags().BoolP("verbose", "v", false, "enable verbose output")
 	rootCmd.AddCommand(showCmd)
 }
