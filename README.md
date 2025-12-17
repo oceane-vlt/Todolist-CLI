@@ -50,7 +50,7 @@ The final result is a modular, extensible, and educational codebase demonstratin
     - [x] Implement *Read* method
         - [x] Return the existing todo lists
         - [x] Return the items in a certain todo list       
-    - [ ] Implement *Update* method (add items in a list)
+    - [x] Implement *Update* method (add items in a list)
     - [x] Implement *Delete* method
         - [x] Delete an entire list
         - [x] Delete items in a list
@@ -91,6 +91,9 @@ The final result is a modular, extensible, and educational codebase demonstratin
         - [ ] Delete without the title -> Display the list of todo lists
     - COMPLETE
         - [ ] Show the updated list once the items have been deleted
+    - UPDATE
+        - [ ] If the user don't add the new items as arguments of the command -> ask the user the add the elements he want -> scan stdin -> call updateItem witht the scaned list
+        - [ ] Print the list once updated
 
 ## Testing
 - [x] Add table-driven tests for JSON parsing logic.
