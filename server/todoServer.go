@@ -19,7 +19,7 @@ func init() {
 		log.Fatalf("Failed to get user home directory: %v", err)
 	}
 
-	// Créer le dossier de config s'il n'existe pas
+	// Create config directory if it doesn't exist
 	configDir := filepath.Join(home, ".config", "todolist")
 	if err := os.MkdirAll(configDir, 0755); err != nil {
 		log.Fatalf("Failed to create config directory: %v", err)
@@ -27,7 +27,7 @@ func init() {
 
 	path = filepath.Join(configDir, "data.json")
 
-	// Si le fichier n'existe pas, créer un fichier vide avec structure de base
+	// Create initial data file if it doesn't exist
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		initialData := []byte(`{"lists":{}}`)
 		if err := os.WriteFile(path, initialData, 0644); err != nil {

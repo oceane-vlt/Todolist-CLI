@@ -40,9 +40,6 @@ the data file will be located in *~/.config/todolist/data.json*
 ## Data Storage (JSON first)
 - [x] Create JSON parsing functions to read todo data.
 - [x] Implement map-based structure for nested lists (map[string][]TodoItem).
-- [x] Add GetTodoListsTitles function to extract list names from JSON.
-- [ ] Implement full CRUD operations (create, update, delete).
-- [ ] Add ID generation and validation logic.
 
 ## Business Logic
 - [x] Implement GetTodoLists logic to return list names.
@@ -85,12 +82,12 @@ the data file will be located in *~/.config/todolist/data.json*
     - CREATE
         - [x] Make sure I handle the case user want to create a list that already exist
         - [ ] [optional] Create with *interactive* mode (add details in each item)
-        - [ ] Display the list once created
+        - [x] Display the list once created
     - SHOW
         - [ ] *Show* command with no arguments should display the existing todo lists and ask the user to enter the list he want to view
-        - [ ] Add a verbose option to display only the title or no
+        - [x] Add a verbose option to display only the title or no
     - DELETE
-        - [ ] Delete with the title of the list -> if the list don't exist -> Display the existing todo lists
+        - [x] Delete with the title of the list -> if the list don't exist -> Display the existing todo lists
         - [ ] [optional] Delete with a list of title if -> if a list doesn't exist -> Display the existing todo lists
         - [ ] Delete without the title -> Display the list of todo lists
     - COMPLETE

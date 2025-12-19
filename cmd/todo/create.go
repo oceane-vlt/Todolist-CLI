@@ -42,6 +42,10 @@ var createCmd = &cobra.Command{
 		}
 
 		fmt.Printf("Todo list created: %v\n", request.Title)
+		items := args[1:]
+		for _, itemTitle := range items {
+			fmt.Printf("- %s\n", itemTitle)
+		}
 	},
 }
 

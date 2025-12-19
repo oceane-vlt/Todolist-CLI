@@ -14,7 +14,8 @@ func DeleteTodoList(dataPath string, title string) error {
 
 	_, exist := todoData.Lists[title]
 	if !exist {
-		return fmt.Errorf("todo list %s does not exist", title)
+		availableLists := displayList(todoData)
+		return fmt.Errorf("todo list \"%s\" does not exist. Available lists:\n%s", title, availableLists)
 	}
 
 	delete(todoData.Lists, title)
