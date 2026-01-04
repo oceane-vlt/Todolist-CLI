@@ -29,8 +29,7 @@ func CreateTodoList(path string, title string, items []*todo.Item) error {
 		return err
 	}
 
-	_, exist := todoData.Lists[title]
-	if exist {
+	if findListKey(&todoData, title) != "" {
 		return fmt.Errorf("a todo list named %s already exists", title)
 	}
 

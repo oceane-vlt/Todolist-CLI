@@ -9,3 +9,13 @@ func displayList(data *TodoData) string {
 	}
 	return res.String()
 }
+
+func findListKey(data *TodoData, title string) string {
+	titleLower := strings.ToLower(title)
+	for key := range data.Lists {
+		if strings.ToLower(key) == titleLower {
+			return key
+		}
+	}
+	return ""
+}

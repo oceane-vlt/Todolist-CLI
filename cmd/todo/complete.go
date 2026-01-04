@@ -60,7 +60,6 @@ You can provide multiple item indices to mark them as completed.`,
 			return
 		}
 
-		// fmt.Printf("Indices to mark as completed: %v\n", indices)
 		deleteItemsRequest := &todo.DeleteTodoListItemsRequest{
 			Title:       args[0],
 			ItemIndexes: indices,

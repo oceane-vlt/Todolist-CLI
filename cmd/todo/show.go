@@ -3,8 +3,9 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
+	"os"
 
+	"github.com/oceane-vlt/todolist/libs/errors"
 	todo "github.com/oceane-vlt/todolist/proto"
 	"github.com/spf13/cobra"
 )
@@ -25,7 +26,8 @@ var showCmd = &cobra.Command{
 
 		response, err := grpcClient.ShowTodoListItems(ctx, request)
 		if err != nil {
-			log.Fatalf("Error calling ShowTodoListItems: %v", err)
+			errors.Showerrors(err, args)
+			os.Exit(1)
 		}
 
 		fmt.Printf("Items in todo list: %v\n", request.Title)

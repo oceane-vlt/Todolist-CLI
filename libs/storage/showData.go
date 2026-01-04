@@ -1,6 +1,10 @@
 package storage
 
-import todo "github.com/oceane-vlt/todolist/proto"
+import (
+	"fmt"
+
+	todo "github.com/oceane-vlt/todolist/proto"
+)
 
 func ShowTodoListItems(dataPath string, title string) ([]*todo.Item, error) {
 	todoData, err := ReadTodoData(dataPath)
@@ -8,10 +12,12 @@ func ShowTodoListItems(dataPath string, title string) ([]*todo.Item, error) {
 		return nil, err
 	}
 
-	items, exist := todoData.Lists[title]
-	if !exist {
-		return nil, nil
+	actualKey := findListKey(todoData, title)
+	if actualKey == "" {
+		return nil, fmt.Errorf("todo list %s does not exist", title)
 	}
+
+	items := todoData.Lists[actualKey]
 
 	res := []*todo.Item{}
 	for _, item := range items {

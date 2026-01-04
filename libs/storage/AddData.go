@@ -24,16 +24,16 @@ func UpdateTodoListData(dataPath, title string, newItems []*todo.Item) error {
 		log.Fatal(err)
 	}
 
-	list, exist := data.Lists[title]
-	if !exist {
+	key := findListKey(data, title)
+	if key == "" {
 		return fmt.Errorf("list %s don't exist", title)
 	}
-	updatedList, err := updateData(list, newItems)
+	updatedList, err := updateData(data.Lists[key], newItems)
 	if err != nil {
 		return err
 	}
 
-	data.Lists[title] = updatedList
+	data.Lists[key] = updatedList
 
 	updatedData, err := json.MarshalIndent(data, "", " ")
 	if err != nil {

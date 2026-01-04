@@ -26,21 +26,21 @@ func DeleteTodoListItems(dataPath, title string, indicesToDelete []int32) error 
 	if err != nil {
 		return err
 	}
-
-	listItems, exist := todoData.Lists[title]
-	if !exist {
+	
+	key := findListKey(todoData, title)
+	if key == "" {
 		return fmt.Errorf("todo list %s does not exist", title)
 	}
 
 	for _, idx := range indicesToDelete {
-		if idx < 0 || idx >= int32(len(todoData.Lists[title])) {
+		if idx < 0 || idx >= int32(len(todoData.Lists[key])) {
 			return fmt.Errorf("item index %d out of range for todo list %s", idx, title)
 		}
 	}
 
-	updatedItems := deleteItems(listItems, indicesToDelete)
+	updatedItems := deleteItems(todoData.Lists[key], indicesToDelete)
 
-	todoData.Lists[title] = updatedItems
+	todoData.Lists[key] = updatedItems
 
 	updatedData, err := json.MarshalIndent(todoData, "", "  ")
 	if err != nil {

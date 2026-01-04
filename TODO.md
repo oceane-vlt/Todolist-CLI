@@ -77,6 +77,8 @@ This file tracks planned features and improvements for the todolist-cli project.
 #### SHOW
 - [ ] *Show* command with no arguments should display existing todo lists and ask user to enter the list they want to view
 - [x] Add a verbose option to display only the title or full details
+- [x] We can search with case-insensitive (make sur there is no issue when deleting, creating, etc)
+- [x] Command run with non existing list should display an error
 
 #### DELETE
 - [x] Delete with the title of the list → if the list doesn't exist → Display the existing todo lists

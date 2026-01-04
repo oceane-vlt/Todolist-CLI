@@ -9,11 +9,11 @@ import (
 )
 
 var updateCmd = &cobra.Command{
-	Use:   "update",
-	Short: "update a todo lists with new items",
+	Use:   "add",
+	Short: "add items to a todo list",
 	Long: `Update a todo list. 
 	Usage:
-   - Add items to the list: todo update mylist "item1" "My item2" "my last item3"`,
+   - Add items to the list: todo add mylist "item1" "My item2" "my last item3"`,
 	Args: cobra.MinimumNArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx := context.Background()

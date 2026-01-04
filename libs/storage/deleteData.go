@@ -13,8 +13,7 @@ func DeleteTodoList(dataPath string, title []string) error {
 	}
 
 	for _, title := range title {
-		_, exist := todoData.Lists[title]
-		if !exist {
+		if findListKey(todoData, title) == "" {
 			availableLists := displayList(todoData)
 			return fmt.Errorf("todo list \"%s\" does not exist. Available lists:\n%s", title, availableLists)
 		}

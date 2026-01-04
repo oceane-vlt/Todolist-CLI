@@ -11,9 +11,10 @@ import (
 
 var deleteCmd = &cobra.Command{
 	Use:   "delete",
-	Short: "delete a todo lists",
-	Long: `Delete a todo list. Usage:
-  - Delete a list: todo delete mylist`,
+	Short: "Delete one or more todo lists",
+	Long: `Delete one or more todo lists. Usage:
+  - Delete a single list: todo delete mylist
+  - Delete multiple lists: todo delete list1 list2 list3`,
 	Args: cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx := context.Background()
