@@ -36,7 +36,7 @@ message ShowTodoListItemsResponse {
     repeated Item items = 1;
 }
 message DeleteTodoListRequest {
-    string title = 1;
+    repeated string title = 1;
 }
 
 message DeleteTodoListResponse {

@@ -1,4 +1,4 @@
-.PHONY: help install build clean test proto run-server run-cli dev
+.PHONY: help install build clean test proto run-server run-cli dev install-service uninstall-service service-status service-logs
 
 # Variables
 BINARY_NAME_CLI=todo
@@ -113,3 +113,23 @@ lint: ## Run linter (requires golangci-lint)
 	@echo "Running linter..."
 	golangci-lint run
 	@echo "✅ Lint complete!"
+
+install-service: install ## Install launchd service (user mode, starts on login)
+	@echo "Installing launchd service..."
+	@./scripts/install-service.sh
+
+uninstall-service: ## Uninstall launchd service
+	@echo "Uninstalling launchd service..."
+	@./scripts/uninstall-service.sh
+
+service-status: ## Check launchd service status
+	@if launchctl list | grep -q "com.oceane.todolist-server"; then \
+		echo "✅ Service is running"; \
+		launchctl list | grep "com.oceane.todolist-server"; \
+	else \
+		echo "❌ Service is not running"; \
+	fi
+
+service-logs: ## Show service logs (requires service to be installed)
+	@echo "Server logs:"
+	@tail -f $(DATA_DIR)/server.log

@@ -14,12 +14,13 @@ var deleteCmd = &cobra.Command{
 	Short: "delete a todo lists",
 	Long: `Delete a todo list. Usage:
   - Delete a list: todo delete mylist`,
-	Args: cobra.ExactArgs(1),
+	Args: cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx := context.Background()
 
+		titles := args
 		request := &todo.DeleteTodoListRequest{
-			Title: args[0],
+			Title: titles,
 		}
 
 		_, err := grpcClient.DeleteTodoList(ctx, request)

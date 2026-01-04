@@ -1,111 +1,124 @@
-# TodoList Project — gRPC Client/Server Architecture with launchd
+# TodoList CLI
 
-This project aims to build a fully structured **TodoList application** using a modern **client–server architecture** based on **gRPC**.
-The goal is to create a clean separation between:
+A modern **command-line todo list manager** built with **Go** and **gRPC**, featuring a client-server architecture for efficient data management.
 
-* a **CLI client**, which the user interacts with, and
-* a **gRPC server**, which manages all todo lists, applies business logic, and handles data storage.
+## Features
 
-The server runs continuously in the background (managed by `launchd` on macOS), while the CLI communicates with it through gRPC calls to perform operations such as creating, listing, updating, and deleting todo items or lists.
+- 🚀 Fast gRPC-based client-server architecture
+- 📝 Create and manage multiple todo lists
+- ✅ Mark items as complete
+- 🔄 Update and delete lists or items
+- 💾 Local JSON storage (SQLite planned)
+- 🔧 Optional background server via launchd (macOS)
 
-In the first version, todo lists are stored locally in a **JSON file**, allowing for a simple and lightweight persistence layer.
-A future version will upgrade the storage to **SQLite** for more robust data handling and scalability.
+## Quick Start
 
-This project is designed to explore and learn:
+### Installation
 
-* gRPC service design and communication flow
-* clean client–server architecture in Go
-* data persistence strategies
-* background services via launchd
-* CLI ergonomics and practical developer tooling
+**Platforms**: macOS, Linux, Windows
 
-The final result is a modular, extensible, and educational codebase demonstrating how to structure a real-world Go application using gRPC.
+```bash
+# Install the CLI and server
+go install github.com/oceane-vlt/todolist-cli/cmd/todo@latest
+go install github.com/oceane-vlt/todolist-cli/cmd/server@latest
+```
 
+This installs two binaries to `~/go/bin/` (or `%USERPROFILE%\go\bin` on Windows):
+- `todo` - The CLI client
+- `server` - The gRPC server
 
-the data file will be located in *~/.config/todolist/data.json*
+Make sure `~/go/bin` is in your PATH.
 
----
-# Feature implementation Todos
-## Project Setup
-- [x] Initialize the Go module and project structure.
-- [x] Create folders for server, client CLI, proto files, storage, and business logic.
-- [ ] Validate project structure.
+### Running the Server
 
-## gRPC API Design
-- [x] Define basic proto file for firsts CRUD operations (lists).
-- [x] Generate the gRPC server and client code.
-- [x] Define GetTodoLists RPC method to fetch list names.
-- [ ] Validate all request/response messages and service layout.
+You have two options:
 
-## Data Storage (JSON first)
-- [x] Create JSON parsing functions to read todo data.
-- [x] Implement map-based structure for nested lists (map[string][]TodoItem).
+#### Option 1: Manual Server (Quick Start)
 
-## Business Logic
-- [x] Implement GetTodoLists logic to return list names.
-- [x] Connect parsing logic with gRPC service handlers.
-- [x] **Easy** implementation for all CRUD
-    - [x] Implement *Create* method
-        - [x] Enable Create New list with elements
-    - [x] Implement *Read* method
-        - [x] Return the existing todo lists
-        - [x] Return the items in a certain todo list       
-    - [x] Implement *Update* method (add items in a list)
-    - [x] Implement *Delete* method
-        - [x] Delete an entire list
-        - [x] Delete items in a list
-- [x] Remplace deprecated `ioutil.WriteFile` and `ioutil.ReadFile`
-- [ ] Add business rules and validation.
+```bash
+# Start server in background
+make dev
 
-## gRPC Server
-- [x] Create the server executable (cmd/server).
-- [x] Configure the server to listen on 127.0.0.1:50051.
-- [x] Implement GetTodoLists RPC handler.
-- [x] Test the server manually by running it in a terminal.
-- [ ] Add server configuration (storage path, logging).
-- [ ] Implement remaining RPC methods (Create, Update, Delete).
+# Use the CLI
+todo list
+todo create mylist
+todo show mylist
 
-## launchd Integration
-- [ ] Create a launchd plist file to run the server at system startup.
-- [ ] Configure WorkingDirectory, ProgramArguments, and KeepAlive.
-- [ ] Load the plist with launchctl so the server runs continuously in the background.
-- [ ] Verify the server restarts automatically at reboot.
+# Stop server when done
+make stop
+```
 
-## CLI Client
-- [x] Create the CLI structure with Cobra framework.
-- [x] Implement global gRPC client connection.
-- [x] Add 'list' command to fetch and display todo lists.
-- [ ] Implement remaining commands (create, update, delete, show).
-- [ ] Add formatting, error messages, and help text.
-- [ ] Improve CLI ergonomics and user experience.
-- Improvement in CLI commands:
-    - CREATE
-        - [x] Make sure I handle the case user want to create a list that already exist
-        - [ ] [optional] Create with *interactive* mode (add details in each item)
-        - [x] Display the list once created
-    - SHOW
-        - [ ] *Show* command with no arguments should display the existing todo lists and ask the user to enter the list he want to view
-        - [x] Add a verbose option to display only the title or no
-    - DELETE
-        - [x] Delete with the title of the list -> if the list don't exist -> Display the existing todo lists
-        - [ ] [optional] Delete with a list of title if -> if a list doesn't exist -> Display the existing todo lists
-        - [ ] Delete without the title -> Display the list of todo lists
-    - COMPLETE
-        - [ ] Show the updated list once the items have been deleted
-        - [ ] If the index doesn't exist -> ask again to the user
-    - UPDATE
-        - [ ] If the user don't add the new items as arguments of the command -> ask the user the add the elements he want -> scan stdin -> call updateItem witht the scaned list
-        - [ ] Print the list once updated
+#### Option 2: Automatic Server with Daemon (Recommended for Daily Use)
 
-## Testing
-- [x] Add table-driven tests for JSON parsing logic.
-- [x] Test parseTodoListNames function with multiple scenarios.
-- [ ] Test gRPC methods individually with mock data.
-- [ ] Test CLI end-to-end with the running server.
-- [ ] Add integration tests.
-- [ ] Validate behavior on reboot with launchd active.
+⚠️ **TODO**: Daemon installation currently requires manual configuration. The plist file contains hardcoded paths that need to be templated.
 
-## Future Improvements
-- [ ] Replace JSON storage with SQLite backend.
-- [ ] Add configuration files or environment variables.
-- [ ] Add optional auth, TLS, or multi-user features.
+For now, use manual server mode (Option 1) or see [docs/daemon-setup.md](docs/daemon-setup.md) for advanced setup.
+
+### Basic Usage
+
+```bash
+# List all todo lists
+todo list
+
+# Create a new list with items
+todo create shopping "Buy milk" "Buy eggs" "Buy bread"
+
+# Show a specific list
+todo show shopping
+
+# Mark items as complete (by index)
+todo complete shopping 1 2
+
+# Add items to an existing list
+todo update shopping "Buy cheese"
+
+# Delete items from a list (by index)
+todo delete-items shopping 1
+
+# Delete an entire list
+todo delete shopping
+```
+
+See [docs/usage.md](docs/usage.md) for complete CLI reference.
+
+## Documentation
+
+- [Installation Guide](docs/installation.md) - Detailed installation instructions
+- [Usage Guide](docs/usage.md) - Complete CLI command reference
+- [Daemon Setup](docs/daemon-setup.md) - Configure automatic server startup (macOS)
+
+## Project Structure
+
+```
+todolist-cli/
+├── cmd/
+│   ├── todo/          # CLI client commands
+│   └── server/        # gRPC server
+├── proto/             # Protocol Buffer definitions
+├── libs/
+│   └── storage/       # Data persistence layer
+├── scripts/           # Installation and service scripts
+└── docs/              # Documentation
+```
+
+## Architecture
+
+This project uses a **client-server architecture**:
+
+- **CLI Client**: Lightweight command-line interface that communicates with the server
+- **gRPC Server**: Handles business logic, data validation, and storage
+- **Protocol Buffers**: Defines the contract between client and server
+
+The server runs continuously in the background, while the CLI makes quick RPC calls to perform operations. This design allows for future enhancements like web interfaces or mobile clients sharing the same backend.
+
+Data is stored in `~/.config/todolist/data.json`.
+
+## Requirements
+
+- Go 1.24 or later
+- macOS, Linux, or Windows
+- Note: Daemon service (automatic server startup) is macOS-only via launchd
+
+## License
+
+MIT License - see LICENSE file for details.

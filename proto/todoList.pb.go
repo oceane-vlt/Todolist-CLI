@@ -287,7 +287,7 @@ func (x *ShowTodoListItemsResponse) GetItems() []*Item {
 
 type DeleteTodoListRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Title         string                 `protobuf:"bytes,1,opt,name=title,proto3" json:"title,omitempty"`
+	Title         []string               `protobuf:"bytes,1,rep,name=title,proto3" json:"title,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -322,11 +322,11 @@ func (*DeleteTodoListRequest) Descriptor() ([]byte, []int) {
 	return file_proto_todoList_proto_rawDescGZIP(), []int{6}
 }
 
-func (x *DeleteTodoListRequest) GetTitle() string {
+func (x *DeleteTodoListRequest) GetTitle() []string {
 	if x != nil {
 		return x.Title
 	}
-	return ""
+	return nil
 }
 
 type DeleteTodoListResponse struct {
@@ -681,7 +681,7 @@ const file_proto_todoList_proto_rawDesc = "" +
 	"\x05items\x18\x01 \x03(\v2\n" +
 	".todo.ItemR\x05items\"-\n" +
 	"\x15DeleteTodoListRequest\x12\x14\n" +
-	"\x05title\x18\x01 \x01(\tR\x05title\"\x18\n" +
+	"\x05title\x18\x01 \x03(\tR\x05title\"\x18\n" +
 	"\x16DeleteTodoListResponse\"M\n" +
 	"\x15CreateTodoListRequest\x12\x14\n" +
 	"\x05title\x18\x01 \x01(\tR\x05title\x12\x1e\n" +

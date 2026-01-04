@@ -5,20 +5,23 @@ import (
 	"fmt"
 )
 
-func DeleteTodoList(dataPath string, title string) error {
+func DeleteTodoList(dataPath string, title []string) error {
 
 	todoData, err := ReadTodoData(dataPath)
 	if err != nil {
 		return err
 	}
 
-	_, exist := todoData.Lists[title]
-	if !exist {
-		availableLists := displayList(todoData)
-		return fmt.Errorf("todo list \"%s\" does not exist. Available lists:\n%s", title, availableLists)
+	for _, title := range title {
+		_, exist := todoData.Lists[title]
+		if !exist {
+			availableLists := displayList(todoData)
+			return fmt.Errorf("todo list \"%s\" does not exist. Available lists:\n%s", title, availableLists)
+		}
 	}
-
-	delete(todoData.Lists, title)
+	for _, title := range title {
+		delete(todoData.Lists, title)
+	}
 
 	updatedData, err := json.MarshalIndent(todoData, "", "  ")
 	if err != nil {
