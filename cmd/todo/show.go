@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/oceane-vlt/todolist/libs/errors"
+	"github.com/oceane-vlt/todolist/libs/ui"
 	todo "github.com/oceane-vlt/todolist/proto"
 	"github.com/spf13/cobra"
 )
@@ -30,17 +31,19 @@ var showCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		fmt.Printf("Items in todo list: %v\n", request.Title)
-		if verbose, _ := cmd.Flags().GetBool("verbose"); verbose {
-			for _, item := range response.Items {
-				fmt.Printf("- %s (Description: %s, Completed: %v, DueDate: %s, Priority: %s)\n",
-					item.Title, item.Description, item.Completed, item.DueDate, item.Priority)
-			}
-		} else {
-			for _, item := range response.Items {
-				fmt.Printf("- %s\n", item.Title)
-			}
+		if len(response.Items) == 0 {
+			ui.Info(fmt.Sprintf("List '%s' is empty. Add items with %s", request.Title, ui.Command("todo update "+request.Title+" <item>")))
+			return
 		}
+
+		// ui.Header(fmt.Sprintf("📝 Items in \"%s\":", request.Title))
+
+
+		ui.ShowUi(response.Items, request.Title)
+		// for i, item := range response.Items {
+		// 	ui.ListItem(i, item.Title, item.Completed)
+		// }
+		fmt.Println()
 	},
 }
 

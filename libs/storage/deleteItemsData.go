@@ -15,6 +15,9 @@ func deleteItems(items []TodoItem, indicesToDelete []int32) []TodoItem {
 	for i, item := range items {
 		if !contains(int32(i), indicesToDelete) {
 			updatedItems = append(updatedItems, item)
+		} else {
+			item.Completed = true
+			updatedItems = append(updatedItems, item)
 		}
 	}
 
@@ -34,7 +37,7 @@ func DeleteTodoListItems(dataPath, title string, indicesToDelete []int32) error 
 
 	for _, idx := range indicesToDelete {
 		if idx < 0 || idx >= int32(len(todoData.Lists[key])) {
-			return fmt.Errorf("item index %d out of range for todo list %s", idx, title)
+			return fmt.Errorf("item index %d out of range for todo list %s", idx + 1, title)
 		}
 	}
 

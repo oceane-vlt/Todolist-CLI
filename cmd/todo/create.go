@@ -3,8 +3,9 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 
+	"github.com/oceane-vlt/todolist/libs/errors"
+	"github.com/oceane-vlt/todolist/libs/ui"
 	todo "github.com/oceane-vlt/todolist/proto"
 	"github.com/spf13/cobra"
 )
@@ -38,13 +39,20 @@ var createCmd = &cobra.Command{
 
 		_, err := grpcClient.CreateTodoList(ctx, request)
 		if err != nil {
-			log.Fatalf("Error calling CreateTodoList: %v", err)
+			errors.Showerrors(err, args)
+			return
 		}
 
-		fmt.Printf("Todo list created: %v\n", request.Title)
-		items := args[1:]
-		for _, itemTitle := range items {
-			fmt.Printf("- %s\n", itemTitle)
+		if len(todoItems) == 0 {
+			ui.Success(fmt.Sprintf("Created empty list '%s'", request.Title))
+			ui.Info(fmt.Sprintf("Add items with %s", ui.Command("todo update "+request.Title+" <item>")))
+		} else {
+			ui.Success(fmt.Sprintf("Created list '%s' with %d items", request.Title, len(todoItems)))
+			fmt.Println()
+			for i, item := range todoItems {
+				ui.ListItem(i, item.Title, false)
+			}
+			fmt.Println()
 		}
 	},
 }

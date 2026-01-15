@@ -27,14 +27,15 @@ This file tracks planned features and improvements for the todolist-cli project.
     - [x] Implement *Read* method
         - [x] Return the existing todo lists
         - [x] Return the items in a certain todo list
-    - [x] Implement *Update* method (add items in a list)
+    - [ ] Implement method *Update* to update an item in a todo list
     - [x] Implement *Delete* method
         - [x] Delete an entire list
         - [x] Delete items in a list
+    - [x] Implement *Add* method (add items in a list)
 - [x] Replace deprecated `ioutil.WriteFile` and `ioutil.ReadFile`
 - [ ] Add comprehensive business rules and validation
 - [ ] Uniformize error handling across all storage functions
-    - [ ] Fix showData.go bug (returns nil, nil instead of error)
+    - [x] Fix showData.go bug (returns nil, nil instead of error)
     - [ ] Update deleteItemsData.go to use displayList() helper
     - [ ] Update updateData.go to use displayList() helper
 
@@ -44,7 +45,7 @@ This file tracks planned features and improvements for the todolist-cli project.
 - [x] Implement GetTodoLists RPC handler
 - [x] Test the server manually by running it in a terminal
 - [ ] Add server configuration (storage path, logging)
-- [ ] Implement remaining RPC methods (Create, Update, Delete)
+- [x] Implement remaining RPC methods (Create, Update, Delete)
 
 ## launchd Integration (macOS)
 - [x] Create a launchd plist file to run the server at startup
@@ -64,10 +65,14 @@ This file tracks planned features and improvements for the todolist-cli project.
 - [x] Implement global gRPC client connection
 - [x] Add 'list' command to fetch and display todo lists
 - [ ] Implement remaining commands (create, update, delete, show)
-- [ ] Add formatting, error messages, and help text
 - [ ] Improve CLI ergonomics and user experience
 
 ### CLI Command Improvements
+
+### General
+- [x] Improve overall display (colors, emoji, etc)
+- [x] Improve errors message for all CRUD methods
+- [ ] Having suggestion when we start typing commands
 
 #### CREATE
 - [x] Handle the case where user wants to create a list that already exists
@@ -79,17 +84,20 @@ This file tracks planned features and improvements for the todolist-cli project.
 - [x] Add a verbose option to display only the title or full details
 - [x] We can search with case-insensitive (make sur there is no issue when deleting, creating, etc)
 - [x] Command run with non existing list should display an error
+- [ ] Only show the 5/7 first completed items
+- [ ] Add a comment/argument to show the full history of completed items
 
 #### DELETE
 - [x] Delete with the title of the list → if the list doesn't exist → Display the existing todo lists
 - [x] [optional] Delete with a list of titles → if a list doesn't exist → Display the existing todo lists
 - [ ] Delete without the title → Display the list of todo lists
+- [ ] Ask for conformation before deleting
 
 #### COMPLETE
 - [ ] Show the updated list once the items have been marked complete
 - [ ] If the index doesn't exist → ask again to the user
 
-#### UPDATE
+#### ADD
 - [ ] If the user doesn't add the new items as arguments of the command → ask the user to add the elements they want → scan stdin → call updateItem with the scanned list
 - [ ] Print the list once updated
 - [ ] Enable create elements with description
@@ -121,3 +129,5 @@ This file tracks planned features and improvements for the todolist-cli project.
 - [ ] Web interface
 - [ ] Mobile app using same gRPC backend
 - [ ] Linux systemd service support
+- [ ] Notification feature
+- [ ] Keep an historic of the completed items (and a new command to show the historic)

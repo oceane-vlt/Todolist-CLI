@@ -3,8 +3,9 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 
+	"github.com/oceane-vlt/todolist/libs/errors"
+	"github.com/oceane-vlt/todolist/libs/ui"
 	todo "github.com/oceane-vlt/todolist/proto"
 	"github.com/spf13/cobra"
 )
@@ -26,9 +27,18 @@ var deleteCmd = &cobra.Command{
 
 		_, err := grpcClient.DeleteTodoList(ctx, request)
 		if err != nil {
-			log.Fatalf("Error calling DeleteTodoList: %v", err)
+			errors.Showerrors(err, args)
+			return
 		}
-		fmt.Printf("Todo list deleted: %v\n", request.Title)
+
+		if len(titles) == 1 {
+			ui.Success(fmt.Sprintf("Deleted list '%s'", titles[0]))
+		} else {
+			ui.Success(fmt.Sprintf("Deleted %d lists", len(titles)))
+			for _, title := range titles {
+				fmt.Printf("  • %s\n", title)
+			}
+		}
 	},
 }
 

@@ -2,8 +2,10 @@ package main
 
 import (
 	"context"
-	"log"
+	"fmt"
 
+	"github.com/oceane-vlt/todolist/libs/errors"
+	"github.com/oceane-vlt/todolist/libs/ui"
 	todo "github.com/oceane-vlt/todolist/proto"
 	"github.com/spf13/cobra"
 )
@@ -32,7 +34,14 @@ var updateCmd = &cobra.Command{
 		}
 		_, err := grpcClient.UpdateTodoList(ctx, request)
 		if err != nil {
-			log.Fatalf("Error calling UpdateTodoList: %v", err)
+			errors.Showerrors(err, args)
+			return
+		}
+
+		if len(todoItems) == 1 {
+			ui.Success(fmt.Sprintf("Added 1 item to '%s'", args[0]))
+		} else {
+			ui.Success(fmt.Sprintf("Added %d items to '%s'", len(todoItems), args[0]))
 		}
 	},
 }
