@@ -22,7 +22,7 @@ func ShowUi(items []*todo.Item, title string){
 		fmt.Printf("\n%s[ ] To do (%d):%s\n\n", Bold, len(notCompleted), ColorReset)
 		notCompletedItemsUi(notCompleted)
 	} else if len(completed) > 0 {
-		fmt.Printf("\n%sCongratulations! All items completed in \"%s\"%s\n", BoldGreen, title, ColorReset)
+		fmt.Printf("\n%sCongratulations! All items completed in \"%s\" todolist%s\n", BoldGreen, title, ColorReset)
 	}
 
 	if len(completed) > 0 {

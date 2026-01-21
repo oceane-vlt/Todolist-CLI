@@ -45,34 +45,44 @@ You can provide multiple item indices to mark them as completed.`,
 			return
 		}
 
-		fmt.Printf("\nEnter the indices of items to mark as completed (space-separated): ")
-		reader := bufio.NewReader(os.Stdin)
-		input, err := reader.ReadString('\n')
-		if err != nil {
-			ui.Error(fmt.Sprintf("Error reading input: %v", err))
-			return
-		}
-		input = strings.TrimSpace(input)
-
-		fields := strings.Fields(input)
-
 		var indices []int32
-		for _, field := range fields {
-			num, err := strconv.Atoi(field)
+		for {
+			fmt.Printf("\nEnter the indices of items to mark as completed (space-separated): ")
+			reader := bufio.NewReader(os.Stdin)
+			input, err := reader.ReadString('\n')
 			if err != nil {
-				ui.Error(fmt.Sprintf("Invalid index '%s'", field))
-				return
+				ui.Error(fmt.Sprintf("Error reading input: %v", err))
+				continue
 			}
-			if num < 1 || num > len(mapping) {
-				ui.Error(fmt.Sprintf("Index %d is out of range (valid: 1-%d)", num, len(mapping)))
-				return
-			}
-			indices = append(indices, mapping[num-1])
-		}
+			input = strings.TrimSpace(input)
 
-		if len(indices) == 0 {
-			ui.Info("No indices provided")
-			return
+			if input == "" {
+				ui.Info("No indices provided")
+				return
+			}
+
+			fields := strings.Fields(input)
+
+			indices = []int32{}
+			valid := true
+			for _, field := range fields {
+				num, err := strconv.Atoi(field)
+				if err != nil {
+					ui.Error(fmt.Sprintf("Invalid index '%s'", field))
+					valid = false
+					break
+				}
+				if num < 1 || num > len(mapping) {
+					ui.Error(fmt.Sprintf("Index %d is out of range (valid: 1-%d)", num, len(mapping)))
+					valid = false
+					break
+				}
+				indices = append(indices, mapping[num-1])
+			}
+
+			if valid && len(indices) > 0 {
+				break
+			}
 		}
 
 		deleteItemsRequest := &todo.DeleteTodoListItemsRequest{

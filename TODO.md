@@ -94,12 +94,12 @@ This file tracks planned features and improvements for the todolist-cli project.
 - [ ] Ask for conformation before deleting
 
 #### COMPLETE
-- [ ] Show the updated list once the items have been marked complete
+- [ ] Show the updated list once the items have been marked complete 
 - [ ] If the index doesn't exist → ask again to the user
 
 #### ADD
 - [ ] If the user doesn't add the new items as arguments of the command → ask the user to add the elements they want → scan stdin → call updateItem with the scanned list
-- [ ] Print the list once updated
+- [x] Print the list once updated
 - [ ] Enable create elements with description
 
 ## Testing
@@ -131,3 +131,4 @@ This file tracks planned features and improvements for the todolist-cli project.
 - [ ] Linux systemd service support
 - [ ] Notification feature
 - [ ] Keep an historic of the completed items (and a new command to show the historic)
+- [ ] macOS Quick Action/Spotlight integration (display todos in notification with keyboard shortcut)

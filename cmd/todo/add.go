@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"os"
+
 	"github.com/oceane-vlt/todolist/libs/errors"
 	"github.com/oceane-vlt/todolist/libs/ui"
 	todo "github.com/oceane-vlt/todolist/proto"
@@ -13,7 +15,7 @@ import (
 var updateCmd = &cobra.Command{
 	Use:   "add",
 	Short: "add items to a todo list",
-	Long: `Update a todo list. 
+	Long: `Update a todo list.
 	Usage:
    - Add items to the list: todo add mylist "item1" "My item2" "my last item3"`,
 	Args: cobra.MinimumNArgs(2),
@@ -28,11 +30,11 @@ var updateCmd = &cobra.Command{
 			}
 			todoItems = append(todoItems, todoItem)
 		}
-		request := &todo.UpdateTodoListRequest{
+		updateRequest := &todo.UpdateTodoListRequest{
 			Title: args[0],
 			Items: todoItems,
 		}
-		_, err := grpcClient.UpdateTodoList(ctx, request)
+		_, err := grpcClient.UpdateTodoList(ctx, updateRequest)
 		if err != nil {
 			errors.Showerrors(err, args)
 			return
@@ -43,6 +45,21 @@ var updateCmd = &cobra.Command{
 		} else {
 			ui.Success(fmt.Sprintf("Added %d items to '%s'", len(todoItems), args[0]))
 		}
+
+		fmt.Println()
+		ui.Info("Updated list:")
+
+		request := &todo.ShowTodoListItemsRequest{
+			Title: args[0],
+		}
+
+		response, err := grpcClient.ShowTodoListItems(ctx, request)
+		if err != nil {
+			errors.Showerrors(err, args)
+			os.Exit(1)
+		}
+		ui.CompleteUi(response.Items, request.Title)
+		fmt.Println()
 	},
 }
 

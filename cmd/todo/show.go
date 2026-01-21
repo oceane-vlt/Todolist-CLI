@@ -36,13 +36,7 @@ var showCmd = &cobra.Command{
 			return
 		}
 
-		// ui.Header(fmt.Sprintf("📝 Items in \"%s\":", request.Title))
-
-
 		ui.ShowUi(response.Items, request.Title)
-		// for i, item := range response.Items {
-		// 	ui.ListItem(i, item.Title, item.Completed)
-		// }
 		fmt.Println()
 	},
 }
