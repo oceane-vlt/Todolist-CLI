@@ -14,6 +14,7 @@ const (
 	ColorBlue   = "\033[34m"
 	ColorGray   = "\033[90m"
 	Bold        = "\033[1m"
+	Italic      = "\033[3m"
 	BoldRed     = "\033[1;31m"
 	BoldGreen   = "\033[1;32m"
 	BoldBlue    = "\033[1;34m"
@@ -44,6 +45,10 @@ func BoldText(text string) string {
 	return fmt.Sprintf("%s%s%s", Bold, text, ColorReset)
 }
 
+// ItalicText formats text in italic
+func ItalicText(text string) string {
+	return fmt.Sprintf("%s%s%s", Italic, text, ColorReset)
+}
 
 // Header prints a section header
 func Header(title string) {
