@@ -40,9 +40,17 @@ func parseTodoListNames(jsonData []byte) []*todo.ListSize {
 	res := []*todo.ListSize{}
 
 	for listName := range todoData.Lists {
+		// Count only non-completed items
+		nonCompletedCount := 0
+		for _, item := range todoData.Lists[listName] {
+			if !item.Completed {
+				nonCompletedCount++
+			}
+		}
+
 		list := todo.ListSize{
 			Title: listName,
-			Size:  int32(len(todoData.Lists[listName])),
+			Size:  int32(nonCompletedCount),
 		}
 		res = append(res, &list)
 		fmt.Printf("Found list:%s size:%d\n", list.Title, list.Size)
