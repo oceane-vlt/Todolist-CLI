@@ -2,6 +2,8 @@
 
 A modern **command-line todo list manager** built with **Go** and **gRPC**, featuring a client-server architecture for efficient data management.
 
+This project serves as a practical learning project for understanding how gRPC works in a real-world application. While a simpler approach could have been used for a local CLI tool, gRPC provides valuable experience with modern service communication patterns.
+
 ## Features
 
 - 🚀 Fast gRPC-based client-server architecture
@@ -61,7 +63,7 @@ The server will:
 
 The installation script automatically detects your `$GOBIN` and `$HOME` paths and generates the plist file for you. See [docs/daemon-setup.md](docs/daemon-setup.md) for details.
 
-### Basic Usage
+### Basic Usage Example
 
 ```bash
 # List all todo lists
@@ -73,20 +75,11 @@ todo create shopping "Buy milk" "Buy eggs" "Buy bread"
 # Show a specific list
 todo show shopping
 
-# Show full history (including completed items)
-todo show shopping -H
-
 # Add items to an existing list
 todo add shopping "Buy cheese" "Buy milk"
 
-# Update an existing item (interactive)
-todo update shopping
-
 # Mark items as complete (interactive)
 todo complete shopping
-
-# Delete items from a list (by index)
-todo delete-items shopping 1
 
 # Delete an entire list
 todo delete shopping
