@@ -13,11 +13,13 @@ make dev  # Start server in background
 
 | Command | Description |
 |---------|-------------|
-| `todo list` | List all todo lists |
+| `todo list` | List all todo lists (shows non-completed item count) |
 | `todo create <name> [items...]` | Create a new todo list |
 | `todo show <name>` | Display items in a list |
-| `todo update <name> <items...>` | Add items to an existing list |
-| `todo complete <name> <indices...>` | Mark items as complete |
+| `todo show <name> -H` | Show full history (all items including completed) |
+| `todo add <name> <items...>` | Add new items to an existing list |
+| `todo update <name>` | Edit an existing item (interactive) |
+| `todo complete <name>` | Mark items as complete (interactive) |
 | `todo delete <name>` | Delete an entire list |
 | `todo delete-items <name> <indices...>` | Delete specific items |
 
@@ -68,28 +70,31 @@ Add `--verbose` flag to show full details (when available).
 ### Add Items to a List
 
 ```bash
-todo update <list-name> <item1> [item2] [item3...]
+todo add <list-name> <item1> [item2] [item3...]
 ```
 
 **Example:**
 ```bash
-todo update shopping "Buy cheese" "Buy yogurt"
+todo add shopping "Buy cheese" "Buy yogurt"
 ```
 
-Items are appended to the end of the list.
+Items are appended to the end of the list. Shows the updated list after adding.
+
+### Update an Existing Item
+
+```bash
+todo update <list-name>
+```
+
+**Interactive command:** Displays non-completed items, prompts for index, then allows editing the item text with arrow keys (uses promptui). Press Enter to keep current value or modify and save.
 
 ### Mark Items as Complete
 
 ```bash
-todo complete <list-name> <index1> [index2] [index3...]
+todo complete <list-name>
 ```
 
-**Example:**
-```bash
-todo complete shopping 1 3 5
-```
-
-Indices start at 1. Completed items show `[x]` in `todo show`.
+**Interactive command:** Displays non-completed items with indices starting at 1. Enter space-separated indices to mark as complete. Re-prompts if invalid indices are entered.
 
 ### Delete Specific Items
 

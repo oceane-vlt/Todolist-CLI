@@ -50,9 +50,16 @@ make stop
 
 #### Option 2: Automatic Server with Daemon (Recommended for Daily Use)
 
-⚠️ **TODO**: Daemon installation currently requires manual configuration. The plist file contains hardcoded paths that need to be templated.
+```bash
+make install-service
+```
 
-For now, use manual server mode (Option 1) or see [docs/daemon-setup.md](docs/daemon-setup.md) for advanced setup.
+The server will:
+- Start automatically on login
+- Restart on crash
+- Run in the background
+
+The installation script automatically detects your `$GOBIN` and `$HOME` paths and generates the plist file for you. See [docs/daemon-setup.md](docs/daemon-setup.md) for details.
 
 ### Basic Usage
 
@@ -66,11 +73,17 @@ todo create shopping "Buy milk" "Buy eggs" "Buy bread"
 # Show a specific list
 todo show shopping
 
-# Mark items as complete (by index)
-todo complete shopping 1 2
+# Show full history (including completed items)
+todo show shopping -H
 
 # Add items to an existing list
-todo update shopping "Buy cheese"
+todo add shopping "Buy cheese" "Buy milk"
+
+# Update an existing item (interactive)
+todo update shopping
+
+# Mark items as complete (interactive)
+todo complete shopping
 
 # Delete items from a list (by index)
 todo delete-items shopping 1

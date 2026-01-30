@@ -43,9 +43,6 @@ Verify installation:
 ```bash
 which todo      # macOS/Linux: Should show path to todo
 which server    # macOS/Linux: Should show path to server
-
-# Or
-todo --version
 ```
 
 ## Choose Your Server Mode
@@ -73,16 +70,6 @@ This will:
 2. Rebuild and reinstall the binaries
 3. Start the server in the background
 4. Log output to `/tmp/todoserver.log`
-
-**Manual method** (for more control):
-```bash
-# Start server in background
-nohup server > /tmp/todoserver.log 2>&1 &
-
-# Or with screen/tmux for interactive monitoring
-screen -S todoserver
-server  # Press Ctrl+A then D to detach
-```
 
 ### Checking Server Status
 
@@ -124,18 +111,18 @@ make dev  # Rebuilds, reinstalls, and restarts
 
 ## Option 2: Automatic Server with Daemon (macOS Only)
 
-⚠️ **TODO - Manual Configuration Required**: The launchd service setup currently requires manual path configuration. The plist file contains hardcoded paths specific to the original developer's machine.
+**Recommended for daily use.** The server runs in the background and starts automatically on login.
 
-**Current Status**: Not ready for general use until the plist file is templated.
+```bash
+make install-service
+```
 
-**What needs to be done**:
-1. The `com.oceane.todolist-server.plist` file needs to be converted to a template
-2. Paths like `/Users/oceane.valat/...` need to be replaced with variables
-3. An installation script needs to generate a personalized plist for each user
+The script automatically:
+- Detects your `$GOBIN` and `$HOME` paths
+- Generates the launchd plist file
+- Installs and starts the service
 
-**For now, please use Option 1 (Manual Server Mode).**
-
-If you're comfortable editing configuration files manually, see [daemon-setup.md](daemon-setup.md) for advanced launchd setup instructions.
+See [daemon-setup.md](daemon-setup.md) for details and troubleshooting.
 
 ---
 

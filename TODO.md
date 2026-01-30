@@ -53,7 +53,7 @@ This file tracks planned features and improvements for the todolist-cli project.
 - [x] Create install/uninstall scripts for user-mode service
 - [x] Load the plist with launchctl so the server runs continuously
 - [x] Verify the server restarts automatically on crash
-- [ ] **Template the plist file for portability**
+- [x] **Template the plist file for portability**
     - [x] Create com.todolist.server.plist.template with {{HOME}} and {{GOBIN}} placeholders
     - [x] Update install-service.sh to generate plist before installing
     - [x] Add *.plist to .gitignore (keep only template in repo)
@@ -74,7 +74,7 @@ This file tracks planned features and improvements for the todolist-cli project.
 - [ ] Having suggestion when we start typing commands
 
 #### LIST
-- [ ] The number of elements displayed should be the non completed one
+- [x] The number of elements displayed should be the non completed one
 
 #### CREATE
 - [x] Handle the case where user wants to create a list that already exists
@@ -86,8 +86,8 @@ This file tracks planned features and improvements for the todolist-cli project.
 - [x] Add a verbose option to display only the title or full details
 - [x] We can search with case-insensitive (make sur there is no issue when deleting, creating, etc)
 - [x] Command run with non existing list should display an error
-- [ ] Only show the 5/7 first completed items
-- [ ] Add a comment/argument (--history -h) to show the full history of completed items
+- [x] Only show the 7 first completed items (shows first 7, use -H for all)
+- [x] Add a comment/argument (--history -H) to show the full history of completed items
 
 #### DELETE
 - [x] Delete with the title of the list → if the list doesn't exist → Display the existing todo lists
