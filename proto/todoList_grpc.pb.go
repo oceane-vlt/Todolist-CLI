@@ -25,6 +25,7 @@ const (
 	TodoListService_DeleteTodoList_FullMethodName      = "/todo.TodoListService/DeleteTodoList"
 	TodoListService_DeleteTodoListItems_FullMethodName = "/todo.TodoListService/DeleteTodoListItems"
 	TodoListService_UpdateTodoList_FullMethodName      = "/todo.TodoListService/UpdateTodoList"
+	TodoListService_UpdateTodoListItem_FullMethodName  = "/todo.TodoListService/UpdateTodoListItem"
 )
 
 // TodoListServiceClient is the client API for TodoListService service.
@@ -37,6 +38,7 @@ type TodoListServiceClient interface {
 	DeleteTodoList(ctx context.Context, in *DeleteTodoListRequest, opts ...grpc.CallOption) (*DeleteTodoListResponse, error)
 	DeleteTodoListItems(ctx context.Context, in *DeleteTodoListItemsRequest, opts ...grpc.CallOption) (*DeleteTodoListItemsResponse, error)
 	UpdateTodoList(ctx context.Context, in *UpdateTodoListRequest, opts ...grpc.CallOption) (*UpdateTodoListResponse, error)
+	UpdateTodoListItem(ctx context.Context, in *UpdateTodoListItemRequest, opts ...grpc.CallOption) (*UpdateTodoListItemResponse, error)
 }
 
 type todoListServiceClient struct {
@@ -107,6 +109,16 @@ func (c *todoListServiceClient) UpdateTodoList(ctx context.Context, in *UpdateTo
 	return out, nil
 }
 
+func (c *todoListServiceClient) UpdateTodoListItem(ctx context.Context, in *UpdateTodoListItemRequest, opts ...grpc.CallOption) (*UpdateTodoListItemResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateTodoListItemResponse)
+	err := c.cc.Invoke(ctx, TodoListService_UpdateTodoListItem_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // TodoListServiceServer is the server API for TodoListService service.
 // All implementations must embed UnimplementedTodoListServiceServer
 // for forward compatibility.
@@ -117,6 +129,7 @@ type TodoListServiceServer interface {
 	DeleteTodoList(context.Context, *DeleteTodoListRequest) (*DeleteTodoListResponse, error)
 	DeleteTodoListItems(context.Context, *DeleteTodoListItemsRequest) (*DeleteTodoListItemsResponse, error)
 	UpdateTodoList(context.Context, *UpdateTodoListRequest) (*UpdateTodoListResponse, error)
+	UpdateTodoListItem(context.Context, *UpdateTodoListItemRequest) (*UpdateTodoListItemResponse, error)
 	mustEmbedUnimplementedTodoListServiceServer()
 }
 
@@ -144,6 +157,9 @@ func (UnimplementedTodoListServiceServer) DeleteTodoListItems(context.Context, *
 }
 func (UnimplementedTodoListServiceServer) UpdateTodoList(context.Context, *UpdateTodoListRequest) (*UpdateTodoListResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateTodoList not implemented")
+}
+func (UnimplementedTodoListServiceServer) UpdateTodoListItem(context.Context, *UpdateTodoListItemRequest) (*UpdateTodoListItemResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateTodoListItem not implemented")
 }
 func (UnimplementedTodoListServiceServer) mustEmbedUnimplementedTodoListServiceServer() {}
 func (UnimplementedTodoListServiceServer) testEmbeddedByValue()                         {}
@@ -274,6 +290,24 @@ func _TodoListService_UpdateTodoList_Handler(srv interface{}, ctx context.Contex
 	return interceptor(ctx, in, info, handler)
 }
 
+func _TodoListService_UpdateTodoListItem_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateTodoListItemRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TodoListServiceServer).UpdateTodoListItem(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: TodoListService_UpdateTodoListItem_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TodoListServiceServer).UpdateTodoListItem(ctx, req.(*UpdateTodoListItemRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // TodoListService_ServiceDesc is the grpc.ServiceDesc for TodoListService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -304,6 +338,10 @@ var TodoListService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpdateTodoList",
 			Handler:    _TodoListService_UpdateTodoList_Handler,
+		},
+		{
+			MethodName: "UpdateTodoListItem",
+			Handler:    _TodoListService_UpdateTodoListItem_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

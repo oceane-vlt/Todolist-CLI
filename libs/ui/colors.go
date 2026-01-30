@@ -44,16 +44,6 @@ func BoldText(text string) string {
 	return fmt.Sprintf("%s%s%s", Bold, text, ColorReset)
 }
 
-// ListItem prints a todo item with checkbox
-func ListItem(index int, title string, completed bool) {
-	checkbox := "[ ]"
-	color := ColorReset
-	if completed {
-		checkbox = "[✓]"
-		color = ColorGray
-	}
-	fmt.Printf("  %d. %s%s %s%s\n", index+1, color, checkbox, title, ColorReset)
-}
 
 // Header prints a section header
 func Header(title string) {

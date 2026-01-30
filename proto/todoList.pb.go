@@ -21,6 +21,102 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type UpdateTodoListItemRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Title         string                 `protobuf:"bytes,1,opt,name=title,proto3" json:"title,omitempty"`
+	ItemIndex     int32                  `protobuf:"varint,2,opt,name=item_index,json=itemIndex,proto3" json:"item_index,omitempty"`
+	NewTitle      string                 `protobuf:"bytes,3,opt,name=new_title,json=newTitle,proto3" json:"new_title,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateTodoListItemRequest) Reset() {
+	*x = UpdateTodoListItemRequest{}
+	mi := &file_proto_todoList_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateTodoListItemRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateTodoListItemRequest) ProtoMessage() {}
+
+func (x *UpdateTodoListItemRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_todoList_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateTodoListItemRequest.ProtoReflect.Descriptor instead.
+func (*UpdateTodoListItemRequest) Descriptor() ([]byte, []int) {
+	return file_proto_todoList_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *UpdateTodoListItemRequest) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
+}
+
+func (x *UpdateTodoListItemRequest) GetItemIndex() int32 {
+	if x != nil {
+		return x.ItemIndex
+	}
+	return 0
+}
+
+func (x *UpdateTodoListItemRequest) GetNewTitle() string {
+	if x != nil {
+		return x.NewTitle
+	}
+	return ""
+}
+
+type UpdateTodoListItemResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateTodoListItemResponse) Reset() {
+	*x = UpdateTodoListItemResponse{}
+	mi := &file_proto_todoList_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateTodoListItemResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateTodoListItemResponse) ProtoMessage() {}
+
+func (x *UpdateTodoListItemResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_todoList_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateTodoListItemResponse.ProtoReflect.Descriptor instead.
+func (*UpdateTodoListItemResponse) Descriptor() ([]byte, []int) {
+	return file_proto_todoList_proto_rawDescGZIP(), []int{1}
+}
+
 type UpdateTodoListRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Title         string                 `protobuf:"bytes,1,opt,name=title,proto3" json:"title,omitempty"`
@@ -31,7 +127,7 @@ type UpdateTodoListRequest struct {
 
 func (x *UpdateTodoListRequest) Reset() {
 	*x = UpdateTodoListRequest{}
-	mi := &file_proto_todoList_proto_msgTypes[0]
+	mi := &file_proto_todoList_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -43,7 +139,7 @@ func (x *UpdateTodoListRequest) String() string {
 func (*UpdateTodoListRequest) ProtoMessage() {}
 
 func (x *UpdateTodoListRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_todoList_proto_msgTypes[0]
+	mi := &file_proto_todoList_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -56,7 +152,7 @@ func (x *UpdateTodoListRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateTodoListRequest.ProtoReflect.Descriptor instead.
 func (*UpdateTodoListRequest) Descriptor() ([]byte, []int) {
-	return file_proto_todoList_proto_rawDescGZIP(), []int{0}
+	return file_proto_todoList_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *UpdateTodoListRequest) GetTitle() string {
@@ -81,7 +177,7 @@ type UpdateTodoListResponse struct {
 
 func (x *UpdateTodoListResponse) Reset() {
 	*x = UpdateTodoListResponse{}
-	mi := &file_proto_todoList_proto_msgTypes[1]
+	mi := &file_proto_todoList_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -93,7 +189,7 @@ func (x *UpdateTodoListResponse) String() string {
 func (*UpdateTodoListResponse) ProtoMessage() {}
 
 func (x *UpdateTodoListResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_todoList_proto_msgTypes[1]
+	mi := &file_proto_todoList_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -106,7 +202,7 @@ func (x *UpdateTodoListResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateTodoListResponse.ProtoReflect.Descriptor instead.
 func (*UpdateTodoListResponse) Descriptor() ([]byte, []int) {
-	return file_proto_todoList_proto_rawDescGZIP(), []int{1}
+	return file_proto_todoList_proto_rawDescGZIP(), []int{3}
 }
 
 type DeleteTodoListItemsRequest struct {
@@ -119,7 +215,7 @@ type DeleteTodoListItemsRequest struct {
 
 func (x *DeleteTodoListItemsRequest) Reset() {
 	*x = DeleteTodoListItemsRequest{}
-	mi := &file_proto_todoList_proto_msgTypes[2]
+	mi := &file_proto_todoList_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -131,7 +227,7 @@ func (x *DeleteTodoListItemsRequest) String() string {
 func (*DeleteTodoListItemsRequest) ProtoMessage() {}
 
 func (x *DeleteTodoListItemsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_todoList_proto_msgTypes[2]
+	mi := &file_proto_todoList_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -144,7 +240,7 @@ func (x *DeleteTodoListItemsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteTodoListItemsRequest.ProtoReflect.Descriptor instead.
 func (*DeleteTodoListItemsRequest) Descriptor() ([]byte, []int) {
-	return file_proto_todoList_proto_rawDescGZIP(), []int{2}
+	return file_proto_todoList_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *DeleteTodoListItemsRequest) GetTitle() string {
@@ -169,7 +265,7 @@ type DeleteTodoListItemsResponse struct {
 
 func (x *DeleteTodoListItemsResponse) Reset() {
 	*x = DeleteTodoListItemsResponse{}
-	mi := &file_proto_todoList_proto_msgTypes[3]
+	mi := &file_proto_todoList_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -181,7 +277,7 @@ func (x *DeleteTodoListItemsResponse) String() string {
 func (*DeleteTodoListItemsResponse) ProtoMessage() {}
 
 func (x *DeleteTodoListItemsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_todoList_proto_msgTypes[3]
+	mi := &file_proto_todoList_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -194,7 +290,7 @@ func (x *DeleteTodoListItemsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteTodoListItemsResponse.ProtoReflect.Descriptor instead.
 func (*DeleteTodoListItemsResponse) Descriptor() ([]byte, []int) {
-	return file_proto_todoList_proto_rawDescGZIP(), []int{3}
+	return file_proto_todoList_proto_rawDescGZIP(), []int{5}
 }
 
 type ShowTodoListItemsRequest struct {
@@ -206,7 +302,7 @@ type ShowTodoListItemsRequest struct {
 
 func (x *ShowTodoListItemsRequest) Reset() {
 	*x = ShowTodoListItemsRequest{}
-	mi := &file_proto_todoList_proto_msgTypes[4]
+	mi := &file_proto_todoList_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -218,7 +314,7 @@ func (x *ShowTodoListItemsRequest) String() string {
 func (*ShowTodoListItemsRequest) ProtoMessage() {}
 
 func (x *ShowTodoListItemsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_todoList_proto_msgTypes[4]
+	mi := &file_proto_todoList_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -231,7 +327,7 @@ func (x *ShowTodoListItemsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ShowTodoListItemsRequest.ProtoReflect.Descriptor instead.
 func (*ShowTodoListItemsRequest) Descriptor() ([]byte, []int) {
-	return file_proto_todoList_proto_rawDescGZIP(), []int{4}
+	return file_proto_todoList_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *ShowTodoListItemsRequest) GetTitle() string {
@@ -250,7 +346,7 @@ type ShowTodoListItemsResponse struct {
 
 func (x *ShowTodoListItemsResponse) Reset() {
 	*x = ShowTodoListItemsResponse{}
-	mi := &file_proto_todoList_proto_msgTypes[5]
+	mi := &file_proto_todoList_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -262,7 +358,7 @@ func (x *ShowTodoListItemsResponse) String() string {
 func (*ShowTodoListItemsResponse) ProtoMessage() {}
 
 func (x *ShowTodoListItemsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_todoList_proto_msgTypes[5]
+	mi := &file_proto_todoList_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -275,7 +371,7 @@ func (x *ShowTodoListItemsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ShowTodoListItemsResponse.ProtoReflect.Descriptor instead.
 func (*ShowTodoListItemsResponse) Descriptor() ([]byte, []int) {
-	return file_proto_todoList_proto_rawDescGZIP(), []int{5}
+	return file_proto_todoList_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *ShowTodoListItemsResponse) GetItems() []*Item {
@@ -294,7 +390,7 @@ type DeleteTodoListRequest struct {
 
 func (x *DeleteTodoListRequest) Reset() {
 	*x = DeleteTodoListRequest{}
-	mi := &file_proto_todoList_proto_msgTypes[6]
+	mi := &file_proto_todoList_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -306,7 +402,7 @@ func (x *DeleteTodoListRequest) String() string {
 func (*DeleteTodoListRequest) ProtoMessage() {}
 
 func (x *DeleteTodoListRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_todoList_proto_msgTypes[6]
+	mi := &file_proto_todoList_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -319,7 +415,7 @@ func (x *DeleteTodoListRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteTodoListRequest.ProtoReflect.Descriptor instead.
 func (*DeleteTodoListRequest) Descriptor() ([]byte, []int) {
-	return file_proto_todoList_proto_rawDescGZIP(), []int{6}
+	return file_proto_todoList_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *DeleteTodoListRequest) GetTitle() []string {
@@ -337,7 +433,7 @@ type DeleteTodoListResponse struct {
 
 func (x *DeleteTodoListResponse) Reset() {
 	*x = DeleteTodoListResponse{}
-	mi := &file_proto_todoList_proto_msgTypes[7]
+	mi := &file_proto_todoList_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -349,7 +445,7 @@ func (x *DeleteTodoListResponse) String() string {
 func (*DeleteTodoListResponse) ProtoMessage() {}
 
 func (x *DeleteTodoListResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_todoList_proto_msgTypes[7]
+	mi := &file_proto_todoList_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -362,7 +458,7 @@ func (x *DeleteTodoListResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteTodoListResponse.ProtoReflect.Descriptor instead.
 func (*DeleteTodoListResponse) Descriptor() ([]byte, []int) {
-	return file_proto_todoList_proto_rawDescGZIP(), []int{7}
+	return file_proto_todoList_proto_rawDescGZIP(), []int{9}
 }
 
 type CreateTodoListRequest struct {
@@ -375,7 +471,7 @@ type CreateTodoListRequest struct {
 
 func (x *CreateTodoListRequest) Reset() {
 	*x = CreateTodoListRequest{}
-	mi := &file_proto_todoList_proto_msgTypes[8]
+	mi := &file_proto_todoList_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -387,7 +483,7 @@ func (x *CreateTodoListRequest) String() string {
 func (*CreateTodoListRequest) ProtoMessage() {}
 
 func (x *CreateTodoListRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_todoList_proto_msgTypes[8]
+	mi := &file_proto_todoList_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -400,7 +496,7 @@ func (x *CreateTodoListRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateTodoListRequest.ProtoReflect.Descriptor instead.
 func (*CreateTodoListRequest) Descriptor() ([]byte, []int) {
-	return file_proto_todoList_proto_rawDescGZIP(), []int{8}
+	return file_proto_todoList_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *CreateTodoListRequest) GetTitle() string {
@@ -430,7 +526,7 @@ type Item struct {
 
 func (x *Item) Reset() {
 	*x = Item{}
-	mi := &file_proto_todoList_proto_msgTypes[9]
+	mi := &file_proto_todoList_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -442,7 +538,7 @@ func (x *Item) String() string {
 func (*Item) ProtoMessage() {}
 
 func (x *Item) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_todoList_proto_msgTypes[9]
+	mi := &file_proto_todoList_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -455,7 +551,7 @@ func (x *Item) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Item.ProtoReflect.Descriptor instead.
 func (*Item) Descriptor() ([]byte, []int) {
-	return file_proto_todoList_proto_rawDescGZIP(), []int{9}
+	return file_proto_todoList_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *Item) GetTitle() string {
@@ -501,7 +597,7 @@ type CreateTodoListResponse struct {
 
 func (x *CreateTodoListResponse) Reset() {
 	*x = CreateTodoListResponse{}
-	mi := &file_proto_todoList_proto_msgTypes[10]
+	mi := &file_proto_todoList_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -513,7 +609,7 @@ func (x *CreateTodoListResponse) String() string {
 func (*CreateTodoListResponse) ProtoMessage() {}
 
 func (x *CreateTodoListResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_todoList_proto_msgTypes[10]
+	mi := &file_proto_todoList_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -526,7 +622,7 @@ func (x *CreateTodoListResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateTodoListResponse.ProtoReflect.Descriptor instead.
 func (*CreateTodoListResponse) Descriptor() ([]byte, []int) {
-	return file_proto_todoList_proto_rawDescGZIP(), []int{10}
+	return file_proto_todoList_proto_rawDescGZIP(), []int{12}
 }
 
 type GetTodoListsRequest struct {
@@ -537,7 +633,7 @@ type GetTodoListsRequest struct {
 
 func (x *GetTodoListsRequest) Reset() {
 	*x = GetTodoListsRequest{}
-	mi := &file_proto_todoList_proto_msgTypes[11]
+	mi := &file_proto_todoList_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -549,7 +645,7 @@ func (x *GetTodoListsRequest) String() string {
 func (*GetTodoListsRequest) ProtoMessage() {}
 
 func (x *GetTodoListsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_todoList_proto_msgTypes[11]
+	mi := &file_proto_todoList_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -562,7 +658,7 @@ func (x *GetTodoListsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetTodoListsRequest.ProtoReflect.Descriptor instead.
 func (*GetTodoListsRequest) Descriptor() ([]byte, []int) {
-	return file_proto_todoList_proto_rawDescGZIP(), []int{11}
+	return file_proto_todoList_proto_rawDescGZIP(), []int{13}
 }
 
 type GetTodoListsResponse struct {
@@ -574,7 +670,7 @@ type GetTodoListsResponse struct {
 
 func (x *GetTodoListsResponse) Reset() {
 	*x = GetTodoListsResponse{}
-	mi := &file_proto_todoList_proto_msgTypes[12]
+	mi := &file_proto_todoList_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -586,7 +682,7 @@ func (x *GetTodoListsResponse) String() string {
 func (*GetTodoListsResponse) ProtoMessage() {}
 
 func (x *GetTodoListsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_todoList_proto_msgTypes[12]
+	mi := &file_proto_todoList_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -599,7 +695,7 @@ func (x *GetTodoListsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetTodoListsResponse.ProtoReflect.Descriptor instead.
 func (*GetTodoListsResponse) Descriptor() ([]byte, []int) {
-	return file_proto_todoList_proto_rawDescGZIP(), []int{12}
+	return file_proto_todoList_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *GetTodoListsResponse) GetLists() []*ListSize {
@@ -619,7 +715,7 @@ type ListSize struct {
 
 func (x *ListSize) Reset() {
 	*x = ListSize{}
-	mi := &file_proto_todoList_proto_msgTypes[13]
+	mi := &file_proto_todoList_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -631,7 +727,7 @@ func (x *ListSize) String() string {
 func (*ListSize) ProtoMessage() {}
 
 func (x *ListSize) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_todoList_proto_msgTypes[13]
+	mi := &file_proto_todoList_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -644,7 +740,7 @@ func (x *ListSize) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListSize.ProtoReflect.Descriptor instead.
 func (*ListSize) Descriptor() ([]byte, []int) {
-	return file_proto_todoList_proto_rawDescGZIP(), []int{13}
+	return file_proto_todoList_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *ListSize) GetTitle() string {
@@ -665,7 +761,13 @@ var File_proto_todoList_proto protoreflect.FileDescriptor
 
 const file_proto_todoList_proto_rawDesc = "" +
 	"\n" +
-	"\x14proto/todoList.proto\x12\x04todo\"O\n" +
+	"\x14proto/todoList.proto\x12\x04todo\"m\n" +
+	"\x19UpdateTodoListItemRequest\x12\x14\n" +
+	"\x05title\x18\x01 \x01(\tR\x05title\x12\x1d\n" +
+	"\n" +
+	"item_index\x18\x02 \x01(\x05R\titemIndex\x12\x1b\n" +
+	"\tnew_title\x18\x03 \x01(\tR\bnewTitle\"\x1c\n" +
+	"\x1aUpdateTodoListItemResponse\"O\n" +
 	"\x15UpdateTodoListRequest\x12\x14\n" +
 	"\x05title\x18\x01 \x01(\tR\x05title\x12 \n" +
 	"\x05items\x18\x02 \x03(\v2\n" +
@@ -699,14 +801,15 @@ const file_proto_todoList_proto_rawDesc = "" +
 	"\x05lists\x18\x01 \x03(\v2\x0e.todo.ListSizeR\x05lists\"4\n" +
 	"\bListSize\x12\x14\n" +
 	"\x05title\x18\x01 \x01(\tR\x05title\x12\x12\n" +
-	"\x04size\x18\x02 \x01(\x05R\x04size2\xfd\x03\n" +
+	"\x04size\x18\x02 \x01(\x05R\x04size2\xd8\x04\n" +
 	"\x0fTodoListService\x12M\n" +
 	"\x0eCreateTodoList\x12\x1b.todo.CreateTodoListRequest\x1a\x1c.todo.CreateTodoListResponse\"\x00\x12G\n" +
 	"\fGetTodoLists\x12\x19.todo.GetTodoListsRequest\x1a\x1a.todo.GetTodoListsResponse\"\x00\x12V\n" +
 	"\x11ShowTodoListItems\x12\x1e.todo.ShowTodoListItemsRequest\x1a\x1f.todo.ShowTodoListItemsResponse\"\x00\x12M\n" +
 	"\x0eDeleteTodoList\x12\x1b.todo.DeleteTodoListRequest\x1a\x1c.todo.DeleteTodoListResponse\"\x00\x12\\\n" +
 	"\x13DeleteTodoListItems\x12 .todo.DeleteTodoListItemsRequest\x1a!.todo.DeleteTodoListItemsResponse\"\x00\x12M\n" +
-	"\x0eUpdateTodoList\x12\x1b.todo.UpdateTodoListRequest\x1a\x1c.todo.UpdateTodoListResponse\"\x00B+Z)github.com/oceane-vlt/todolist/proto;todob\x06proto3"
+	"\x0eUpdateTodoList\x12\x1b.todo.UpdateTodoListRequest\x1a\x1c.todo.UpdateTodoListResponse\"\x00\x12Y\n" +
+	"\x12UpdateTodoListItem\x12\x1f.todo.UpdateTodoListItemRequest\x1a .todo.UpdateTodoListItemResponse\"\x00B+Z)github.com/oceane-vlt/todolist/proto;todob\x06proto3"
 
 var (
 	file_proto_todoList_proto_rawDescOnce sync.Once
@@ -720,42 +823,46 @@ func file_proto_todoList_proto_rawDescGZIP() []byte {
 	return file_proto_todoList_proto_rawDescData
 }
 
-var file_proto_todoList_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
+var file_proto_todoList_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
 var file_proto_todoList_proto_goTypes = []any{
-	(*UpdateTodoListRequest)(nil),       // 0: todo.UpdateTodoListRequest
-	(*UpdateTodoListResponse)(nil),      // 1: todo.UpdateTodoListResponse
-	(*DeleteTodoListItemsRequest)(nil),  // 2: todo.DeleteTodoListItemsRequest
-	(*DeleteTodoListItemsResponse)(nil), // 3: todo.DeleteTodoListItemsResponse
-	(*ShowTodoListItemsRequest)(nil),    // 4: todo.ShowTodoListItemsRequest
-	(*ShowTodoListItemsResponse)(nil),   // 5: todo.ShowTodoListItemsResponse
-	(*DeleteTodoListRequest)(nil),       // 6: todo.DeleteTodoListRequest
-	(*DeleteTodoListResponse)(nil),      // 7: todo.DeleteTodoListResponse
-	(*CreateTodoListRequest)(nil),       // 8: todo.CreateTodoListRequest
-	(*Item)(nil),                        // 9: todo.Item
-	(*CreateTodoListResponse)(nil),      // 10: todo.CreateTodoListResponse
-	(*GetTodoListsRequest)(nil),         // 11: todo.GetTodoListsRequest
-	(*GetTodoListsResponse)(nil),        // 12: todo.GetTodoListsResponse
-	(*ListSize)(nil),                    // 13: todo.ListSize
+	(*UpdateTodoListItemRequest)(nil),   // 0: todo.UpdateTodoListItemRequest
+	(*UpdateTodoListItemResponse)(nil),  // 1: todo.UpdateTodoListItemResponse
+	(*UpdateTodoListRequest)(nil),       // 2: todo.UpdateTodoListRequest
+	(*UpdateTodoListResponse)(nil),      // 3: todo.UpdateTodoListResponse
+	(*DeleteTodoListItemsRequest)(nil),  // 4: todo.DeleteTodoListItemsRequest
+	(*DeleteTodoListItemsResponse)(nil), // 5: todo.DeleteTodoListItemsResponse
+	(*ShowTodoListItemsRequest)(nil),    // 6: todo.ShowTodoListItemsRequest
+	(*ShowTodoListItemsResponse)(nil),   // 7: todo.ShowTodoListItemsResponse
+	(*DeleteTodoListRequest)(nil),       // 8: todo.DeleteTodoListRequest
+	(*DeleteTodoListResponse)(nil),      // 9: todo.DeleteTodoListResponse
+	(*CreateTodoListRequest)(nil),       // 10: todo.CreateTodoListRequest
+	(*Item)(nil),                        // 11: todo.Item
+	(*CreateTodoListResponse)(nil),      // 12: todo.CreateTodoListResponse
+	(*GetTodoListsRequest)(nil),         // 13: todo.GetTodoListsRequest
+	(*GetTodoListsResponse)(nil),        // 14: todo.GetTodoListsResponse
+	(*ListSize)(nil),                    // 15: todo.ListSize
 }
 var file_proto_todoList_proto_depIdxs = []int32{
-	9,  // 0: todo.UpdateTodoListRequest.items:type_name -> todo.Item
-	9,  // 1: todo.ShowTodoListItemsResponse.items:type_name -> todo.Item
-	9,  // 2: todo.CreateTodoListRequest.item:type_name -> todo.Item
-	13, // 3: todo.GetTodoListsResponse.lists:type_name -> todo.ListSize
-	8,  // 4: todo.TodoListService.CreateTodoList:input_type -> todo.CreateTodoListRequest
-	11, // 5: todo.TodoListService.GetTodoLists:input_type -> todo.GetTodoListsRequest
-	4,  // 6: todo.TodoListService.ShowTodoListItems:input_type -> todo.ShowTodoListItemsRequest
-	6,  // 7: todo.TodoListService.DeleteTodoList:input_type -> todo.DeleteTodoListRequest
-	2,  // 8: todo.TodoListService.DeleteTodoListItems:input_type -> todo.DeleteTodoListItemsRequest
-	0,  // 9: todo.TodoListService.UpdateTodoList:input_type -> todo.UpdateTodoListRequest
-	10, // 10: todo.TodoListService.CreateTodoList:output_type -> todo.CreateTodoListResponse
-	12, // 11: todo.TodoListService.GetTodoLists:output_type -> todo.GetTodoListsResponse
-	5,  // 12: todo.TodoListService.ShowTodoListItems:output_type -> todo.ShowTodoListItemsResponse
-	7,  // 13: todo.TodoListService.DeleteTodoList:output_type -> todo.DeleteTodoListResponse
-	3,  // 14: todo.TodoListService.DeleteTodoListItems:output_type -> todo.DeleteTodoListItemsResponse
-	1,  // 15: todo.TodoListService.UpdateTodoList:output_type -> todo.UpdateTodoListResponse
-	10, // [10:16] is the sub-list for method output_type
-	4,  // [4:10] is the sub-list for method input_type
+	11, // 0: todo.UpdateTodoListRequest.items:type_name -> todo.Item
+	11, // 1: todo.ShowTodoListItemsResponse.items:type_name -> todo.Item
+	11, // 2: todo.CreateTodoListRequest.item:type_name -> todo.Item
+	15, // 3: todo.GetTodoListsResponse.lists:type_name -> todo.ListSize
+	10, // 4: todo.TodoListService.CreateTodoList:input_type -> todo.CreateTodoListRequest
+	13, // 5: todo.TodoListService.GetTodoLists:input_type -> todo.GetTodoListsRequest
+	6,  // 6: todo.TodoListService.ShowTodoListItems:input_type -> todo.ShowTodoListItemsRequest
+	8,  // 7: todo.TodoListService.DeleteTodoList:input_type -> todo.DeleteTodoListRequest
+	4,  // 8: todo.TodoListService.DeleteTodoListItems:input_type -> todo.DeleteTodoListItemsRequest
+	2,  // 9: todo.TodoListService.UpdateTodoList:input_type -> todo.UpdateTodoListRequest
+	0,  // 10: todo.TodoListService.UpdateTodoListItem:input_type -> todo.UpdateTodoListItemRequest
+	12, // 11: todo.TodoListService.CreateTodoList:output_type -> todo.CreateTodoListResponse
+	14, // 12: todo.TodoListService.GetTodoLists:output_type -> todo.GetTodoListsResponse
+	7,  // 13: todo.TodoListService.ShowTodoListItems:output_type -> todo.ShowTodoListItemsResponse
+	9,  // 14: todo.TodoListService.DeleteTodoList:output_type -> todo.DeleteTodoListResponse
+	5,  // 15: todo.TodoListService.DeleteTodoListItems:output_type -> todo.DeleteTodoListItemsResponse
+	3,  // 16: todo.TodoListService.UpdateTodoList:output_type -> todo.UpdateTodoListResponse
+	1,  // 17: todo.TodoListService.UpdateTodoListItem:output_type -> todo.UpdateTodoListItemResponse
+	11, // [11:18] is the sub-list for method output_type
+	4,  // [4:11] is the sub-list for method input_type
 	4,  // [4:4] is the sub-list for extension type_name
 	4,  // [4:4] is the sub-list for extension extendee
 	0,  // [0:4] is the sub-list for field type_name
@@ -772,7 +879,7 @@ func file_proto_todoList_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_todoList_proto_rawDesc), len(file_proto_todoList_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   14,
+			NumMessages:   16,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

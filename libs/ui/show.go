@@ -6,6 +6,18 @@ import (
 	todo "github.com/oceane-vlt/todolist/proto"
 )
 
+
+// ListItem prints a todo item with checkbox
+func ListItem(index int, title string, completed bool) {
+	checkbox := "[ ]"
+	color := ColorReset
+	if completed {
+		checkbox = "[✓]"
+		color = ColorGray
+	}
+	fmt.Printf("  %d. %s%s %s%s\n", index+1, color, checkbox, title, ColorReset)
+}
+
 func ShowUi(items []*todo.Item, title string){
 	completed := []*todo.Item{}
 	notCompleted := []*todo.Item{}

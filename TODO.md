@@ -27,7 +27,7 @@ This file tracks planned features and improvements for the todolist-cli project.
     - [x] Implement *Read* method
         - [x] Return the existing todo lists
         - [x] Return the items in a certain todo list
-    - [ ] Implement method *Update* to update an item in a todo list
+    - [x] Implement method *Update* to update an item in a todo list
     - [x] Implement *Delete* method
         - [x] Delete an entire list
         - [x] Delete items in a list
@@ -36,8 +36,8 @@ This file tracks planned features and improvements for the todolist-cli project.
 - [ ] Add comprehensive business rules and validation
 - [ ] Uniformize error handling across all storage functions
     - [x] Fix showData.go bug (returns nil, nil instead of error)
-    - [ ] Update deleteItemsData.go to use displayList() helper
-    - [ ] Update updateData.go to use displayList() helper
+    - [x] Update deleteItemsData.go to use displayList() helper
+    - [x] Update updateData.go to use displayList() helper
 
 ## gRPC Server
 - [x] Create the server executable (cmd/server)
@@ -74,6 +74,9 @@ This file tracks planned features and improvements for the todolist-cli project.
 - [x] Improve errors message for all CRUD methods
 - [ ] Having suggestion when we start typing commands
 
+#### LIST
+- [ ] The number of elements displayed should be the non completed one
+
 #### CREATE
 - [x] Handle the case where user wants to create a list that already exists
 - [ ] [optional] Create with *interactive* mode (add details to each item)
@@ -85,7 +88,7 @@ This file tracks planned features and improvements for the todolist-cli project.
 - [x] We can search with case-insensitive (make sur there is no issue when deleting, creating, etc)
 - [x] Command run with non existing list should display an error
 - [ ] Only show the 5/7 first completed items
-- [ ] Add a comment/argument to show the full history of completed items
+- [ ] Add a comment/argument (--history -h) to show the full history of completed items
 
 #### DELETE
 - [x] Delete with the title of the list → if the list doesn't exist → Display the existing todo lists
@@ -95,7 +98,7 @@ This file tracks planned features and improvements for the todolist-cli project.
 
 #### COMPLETE
 - [ ] Show the updated list once the items have been marked complete 
-- [ ] If the index doesn't exist → ask again to the user
+- [x] If the index doesn't exist → ask again to the user
 
 #### ADD
 - [ ] If the user doesn't add the new items as arguments of the command → ask the user to add the elements they want → scan stdin → call updateItem with the scanned list
