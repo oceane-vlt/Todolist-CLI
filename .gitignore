@@ -8,3 +8,6 @@ data/data.json
 /todo
 /server
 server/server
+
+# Local plist file (generated from template)
+com.todolist.server.plist

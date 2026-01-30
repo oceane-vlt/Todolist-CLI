@@ -54,10 +54,9 @@ This file tracks planned features and improvements for the todolist-cli project.
 - [x] Load the plist with launchctl so the server runs continuously
 - [x] Verify the server restarts automatically on crash
 - [ ] **Template the plist file for portability**
-    - [ ] Create com.oceane.todolist-server.plist.template with {{HOME}} and {{GOBIN}} placeholders
-    - [ ] Create scripts/generate-plist.sh to replace variables
-    - [ ] Update install-service.sh to generate plist before installing
-    - [ ] Add *.plist to .gitignore (keep only template in repo)
+    - [x] Create com.todolist.server.plist.template with {{HOME}} and {{GOBIN}} placeholders
+    - [x] Update install-service.sh to generate plist before installing
+    - [x] Add *.plist to .gitignore (keep only template in repo)
 - [ ] Verify the server restarts automatically at reboot
 
 ## CLI Client

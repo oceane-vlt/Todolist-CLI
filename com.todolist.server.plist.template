@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- Label: unique service identifier -->
+    <key>Label</key>
+    <string>com.todolist.server</string>
+
+    <!-- Program to execute -->
+    <key>ProgramArguments</key>
+    <array>
+        <string>{{GOBIN}}/server</string>
+    </array>
+
+    <!-- Working directory -->
+    <key>WorkingDirectory</key>
+    <string>{{HOME}}/.config/todolist</string>
+
+    <!-- Start automatically on boot -->
+    <key>RunAtLoad</key>
+    <true/>
+
+    <!-- Restart automatically if the server crashes -->
+    <key>KeepAlive</key>
+    <true/>
+
+    <!-- Logs stdout (standard output) -->
+    <key>StandardOutPath</key>
+    <string>{{HOME}}/.config/todolist/server.log</string>
+
+    <!-- Logs stderr (errors) -->
+    <key>StandardErrorPath</key>
+    <string>{{HOME}}/.config/todolist/server-error.log</string>
+
+    <!-- Environment variables (optional) -->
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:{{GOBIN}}</string>
+    </dict>
+
+    <!-- Delay before restart on crash (10 seconds) -->
+    <key>ThrottleInterval</key>
+    <integer>10</integer>
+</dict>
+</plist>

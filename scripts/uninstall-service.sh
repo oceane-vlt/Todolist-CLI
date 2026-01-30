@@ -4,7 +4,7 @@
 
 set -e
 
-SERVICE_NAME="com.oceane.todolist-server"
+SERVICE_NAME="com.todolist.server"
 PLIST_FILE="${SERVICE_NAME}.plist"
 USER_AGENT_DIR="$HOME/Library/LaunchAgents"
 TARGET_PLIST="${USER_AGENT_DIR}/${PLIST_FILE}"

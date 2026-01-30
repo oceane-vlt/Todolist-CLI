@@ -123,9 +123,9 @@ uninstall-service: ## Uninstall launchd service
 	@./scripts/uninstall-service.sh
 
 service-status: ## Check launchd service status
-	@if launchctl list | grep -q "com.oceane.todolist-server"; then \
+	@if launchctl list | grep -q "com.todolist.server"; then \
 		echo "✅ Service is running"; \
-		launchctl list | grep "com.oceane.todolist-server"; \
+		launchctl list | grep "com.todolist.server"; \
 	else \
 		echo "❌ Service is not running"; \
 	fi
