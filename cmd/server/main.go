@@ -20,7 +20,7 @@ func main() {
 
 	todo.RegisterTodoListServiceServer(grpcServer, &server.TodoListServer{})
 
-	log.Println("gRPC server listening on 127.0.0.1:50050")
+	log.Println("gRPC server listening on 127.0.0.1:50051")
 	if err := grpcServer.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}
