@@ -21,7 +21,6 @@ make dev  # Start server in background
 | `todo update <name>` | Edit an existing item (interactive) |
 | `todo complete <name>` | Mark items as complete (interactive) |
 | `todo delete <name>` | Delete an entire list |
-| `todo delete-items <name> <indices...>` | Delete specific items |
 
 ## Commands
 
@@ -96,19 +95,6 @@ todo complete <list-name>
 
 **Interactive command:** Displays non-completed items with indices starting at 1. Enter space-separated indices to mark as complete. Re-prompts if invalid indices are entered.
 
-### Delete Specific Items
-
-```bash
-todo delete-items <list-name> <index1> [index2] [index3...]
-```
-
-**Example:**
-```bash
-todo delete-items shopping 2 4
-```
-
-Remaining items are re-indexed after deletion.
-
 ### Delete an Entire List
 
 ```bash
@@ -128,16 +114,16 @@ todo delete shopping work personal
 ```bash
 todo create today "Review emails" "Team meeting" "Finish report"
 todo show today
-todo complete today 1 2
+todo complete today              # Interactive: select items to mark done
 todo delete today
 ```
 
 ### Shopping List
 ```bash
 todo create shopping "Milk" "Eggs" "Bread"
-todo complete shopping 1 2    # Mark items as bought
-todo update shopping "Coffee" # Add forgotten item
-todo delete shopping          # Done shopping
+todo complete shopping           # Interactive: select items as bought
+todo add shopping "Coffee"       # Add a forgotten item
+todo delete shopping             # Done shopping
 ```
 
 ## Tips

@@ -212,7 +212,6 @@ rm -rf ~/.config/todolist/
 ## Next Steps
 
 - Read the [Usage Guide](usage.md) to learn all available commands
-- See [Development Guide](development.md) to contribute to the project
 - Check [TODO.md](../TODO.md) for planned features
 
 ## Getting Help
