@@ -48,9 +48,11 @@ func TestParseTodoListNames(t *testing.T) {
 					]
 				}
 			}`,
+			// parseTodoListNames counts only non-completed items: work and
+			// personal items are completed (size 0), learning is not (size 1).
 			expectedLists: map[string]int32{
-				"work":     1,
-				"personal": 1,
+				"work":     0,
+				"personal": 0,
 				"learning": 1,
 			},
 			expectError:     false,
