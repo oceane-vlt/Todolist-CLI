@@ -32,6 +32,10 @@ primary_region = "cdg"
   [http_service.http_options]
     h2_backend = true
 
+  # Advertise HTTP/2 via ALPN at the edge so gRPC clients negotiate h2 over TLS.
+  [http_service.tls_options]
+    alpn = ["h2"]
+
 [[vm]]
   size = "shared-cpu-1x"
   memory = "256mb"
