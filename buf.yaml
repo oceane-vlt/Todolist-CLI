@@ -1,0 +1,24 @@
+# buf module configuration (Phase 7 - volet B canonique).
+# buf résout l'import "google/api/annotations.proto" depuis la dépendance
+# distante buf.build/googleapis/googleapis (aucun vendoring requis dans ce repo).
+# Lancer `buf dep update` une fois pour figer buf.lock, puis `make proto-gateway`.
+version: v2
+modules:
+  - path: proto
+deps:
+  - buf.build/googleapis/googleapis
+lint:
+  use:
+    - STANDARD
+  # Le contrat existant ne suit pas toutes les règles STANDARD (noms de RPC,
+  # casse des champs comme dueDate) ; on n'impose pas le lint sur l'API héritée
+  # pour ne pas exiger un renommage cassant le contrat des 7 RPC.
+  except:
+    - FIELD_LOWER_SNAKE_CASE
+    - RPC_REQUEST_RESPONSE_UNIQUE
+    - RPC_REQUEST_STANDARD_NAME
+    - RPC_RESPONSE_STANDARD_NAME
+    - PACKAGE_VERSION_SUFFIX
+breaking:
+  use:
+    - FILE
