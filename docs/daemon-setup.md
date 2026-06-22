@@ -1,5 +1,10 @@
 # Daemon Setup (macOS)
 
+> **Note (remote storage migration):** with the target architecture the server
+> is hosted remotely (Fly.io) and the CLI no longer runs a local server — see
+> [`deployment.md`](./deployment.md). This launchd guide remains valid for the
+> **local JSON** mode (`TODO_STORAGE` unset/`json`), which still works.
+
 Guide for running the TodoList server as a launchd service that starts automatically.
 
 ## What is a launchd service?

@@ -1,0 +1,37 @@
+# Fly.io configuration for the TodoList gRPC server (Phase 6).
+#
+# Manual steps (no real secret is committed — see docs/deployment.md):
+#   1. fly launch --no-deploy        # creates the app, pick a unique app name
+#   2. fly secrets set DATABASE_URL=... SUPABASE_JWT_SECRET=...
+#   3. fly deploy
+#
+# TLS: Fly terminates TLS at the edge (handlers below). The in-process server
+# stays insecure behind the proxy (docs/target-architecture.md §6.2); set
+# TLS_CERT_FILE/TLS_KEY_FILE only for end-to-end TLS to the container.
+
+app = "todolist-server"
+primary_region = "cdg"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  # The server reads PORT and binds 0.0.0.0:$PORT (server/listenaddr.go).
+  PORT = "50051"
+  # Default storage backend on the host is Postgres; DATABASE_URL is a secret.
+  TODO_STORAGE = "postgres"
+
+# gRPC is HTTP/2 over TLS. Fly terminates TLS and forwards h2c to the container.
+[http_service]
+  internal_port = 50051
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [http_service.http_options]
+    h2_backend = true
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"
