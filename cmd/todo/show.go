@@ -35,7 +35,7 @@ var showCmd = &cobra.Command{
 		}
 
 		if len(response.Items) == 0 {
-			ui.Info(fmt.Sprintf("List '%s' is empty. Add items with %s", request.Title, ui.Command("todo update "+request.Title+" <item>")))
+			ui.Info(fmt.Sprintf("List '%s' is empty. Add items with %s", request.Title, ui.Command("todo add "+request.Title+" <item>")))
 			return
 		}
 
