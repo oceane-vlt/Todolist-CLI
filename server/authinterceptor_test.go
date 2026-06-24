@@ -180,8 +180,13 @@ func TestAuthInterceptorFromEnvSelection(t *testing.T) {
 		}
 	})
 	t.Run("neither falls back to dev interceptor", func(t *testing.T) {
+		// Clear ALL auth-mode env vars so this case is fully isolated from the
+		// ambient environment (CI/Fly may export SUPABASE_URL/SUPABASE_JWKS_URL,
+		// which would otherwise enable JWKS mode and flip authEnabled to true).
 		t.Setenv(EnvJWTSigningKey, "")
 		t.Setenv(EnvSupabaseJWTSecret, "")
+		t.Setenv(EnvSupabaseURL, "")
+		t.Setenv(EnvSupabaseJWKSURL, "")
 		if _, enabled := AuthInterceptorFromEnv("dev", nil); enabled {
 			t.Fatal("authEnabled = true, want false when no auth env set")
 		}
