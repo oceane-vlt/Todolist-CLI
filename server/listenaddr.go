@@ -40,3 +40,47 @@ func ListenAddrFromEnv() string {
 	}
 	return defaultListenAddr
 }
+
+// IsLoopbackListenAddr reports whether addr binds the server to the loopback
+// interface only (so it is unreachable from other hosts). It is used to gate
+// the unauthenticated dev mode: running with no authentication is only safe
+// when the server cannot be reached from outside the machine.
+//
+// An address is considered loopback only when its host resolves
+// unambiguously to a loopback address:
+//
+//   - an explicit loopback IP literal (127.0.0.0/8, ::1);
+//   - the hostname "localhost".
+//
+// Anything else is treated as NON-loopback (fail-safe), including:
+//
+//   - the unspecified/wildcard addresses "0.0.0.0" and "::" (bind all
+//     interfaces, the PaaS form);
+//   - an empty host (e.g. ":50051"), which binds all interfaces;
+//   - any other hostname or interface IP;
+//   - a malformed address we cannot parse.
+//
+// Defaulting unknown/unparseable hosts to non-loopback is deliberate: it errs
+// toward refusing the insecure no-auth mode rather than silently allowing a
+// public bind without authentication.
+func IsLoopbackListenAddr(addr string) bool {
+	host, _, err := net.SplitHostPort(addr)
+	if err != nil {
+		// No port (or otherwise malformed): treat the whole string as the host so
+		// a bare "127.0.0.1" or "localhost" still resolves, and anything we cannot
+		// classify falls through to non-loopback below.
+		host = addr
+	}
+	if host == "" {
+		// ":50051" / empty host binds all interfaces -> not loopback.
+		return false
+	}
+	if host == "localhost" {
+		return true
+	}
+	if ip := net.ParseIP(host); ip != nil {
+		return ip.IsLoopback()
+	}
+	// Unknown hostname we cannot resolve to a loopback IP -> fail safe.
+	return false
+}

@@ -66,6 +66,20 @@ func main() {
 	if authEnabled {
 		log.Println("authentication enabled (JWT bearer token required)")
 	} else {
+		// Anti-foot-gun: the unauthenticated dev mode attributes every request to a
+		// single fixed user_id. That is only acceptable when the server is bound to
+		// loopback (unreachable from other hosts). Refusing to start on a public
+		// bind prevents accidentally deploying (e.g. on Fly with PORT set ->
+		// 0.0.0.0:$PORT) with no authentication, which would share one user's data
+		// with everyone. To run publicly, configure authentication by setting one
+		// of JWT_SIGNING_KEY, SUPABASE_URL/SUPABASE_JWKS_URL, or SUPABASE_JWT_SECRET.
+		if !server.IsLoopbackListenAddr(listenAddr) {
+			log.Fatalf("refusing to start: authentication is disabled (no JWT_SIGNING_KEY, "+
+				"SUPABASE_URL/SUPABASE_JWKS_URL, or SUPABASE_JWT_SECRET set) but the listen "+
+				"address %q is not loopback. Unauthenticated mode would expose a single shared "+
+				"user_id to every caller. Either configure authentication or bind to loopback "+
+				"(127.0.0.1 / localhost).", listenAddr)
+		}
 		log.Printf("authentication disabled (dev mode, user_id=%s)", devUserID)
 	}
 
