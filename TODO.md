@@ -2,6 +2,13 @@
 
 This file tracks planned features and improvements for the todolist-cli project.
 
+> **Status (2026-06):** Remote storage, authentication, and deployment are done.
+> The original "SQLite" plan was superseded by a remote PostgreSQL backend (Neon),
+> with Supabase/JWT authentication, TLS, multi-user isolation by `user_id`, a
+> gRPC-Gateway REST endpoint, and Fly.io deployment. A `todo migrate` command
+> imports an existing local `data.json` into the remote store. Local JSON mode is
+> kept as an optional offline/dev backend (`TODO_STORAGE=json`, the default).
+
 ## Project Setup
 - [x] Initialize the Go module and project structure
 - [x] Create folders for server, client CLI, proto files, storage, and business logic
@@ -16,7 +23,7 @@ This file tracks planned features and improvements for the todolist-cli project.
 ## Data Storage (JSON first)
 - [x] Create JSON parsing functions to read todo data
 - [x] Implement map-based structure for nested lists (map[string][]TodoItem)
-- [ ] Upgrade to SQLite for more robust data handling
+- [x] ~~Upgrade to SQLite for more robust data handling~~ → shipped a remote **PostgreSQL** backend (Neon) instead, selectable via `TODO_STORAGE=postgres` + `DATABASE_URL` (JSON remains the default local backend)
 
 ## Business Logic
 - [x] Implement GetTodoLists logic to return list names
@@ -120,9 +127,10 @@ This file tracks planned features and improvements for the todolist-cli project.
 - [ ] Add API documentation for proto file
 
 ## Future Improvements
-- [ ] Replace JSON storage with SQLite backend
-- [ ] Add configuration files or environment variables
-- [ ] Add optional auth, TLS, or multi-user features
+- [x] ~~Replace JSON storage with SQLite backend~~ → done as remote **PostgreSQL** (Neon) backend
+- [x] Add configuration files or environment variables (env-driven config: `TODO_STORAGE`, `DATABASE_URL`, `TODO_SERVER_ENDPOINT`, `TODO_TLS`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, etc.)
+- [x] Add optional auth, TLS, or multi-user features — **done**: Supabase/JWT auth, TLS, multi-user isolation by `user_id`
+- [x] Remote deployment (Fly.io) + gRPC-Gateway REST endpoint + `todo migrate` to import local `data.json`
 - [ ] Support for recurring tasks
 - [ ] Due dates and reminders
 - [ ] Task priorities
