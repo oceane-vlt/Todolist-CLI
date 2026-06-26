@@ -1,20 +1,18 @@
 # Installation Guide
 
-This guide covers how to install the TodoList CLI and configure it to talk to a
-remote server. The **recommended setup is the remote mode**: the gRPC server runs
-on a managed host (e.g. Fly.io) backed by PostgreSQL (Neon) and Supabase Auth,
-and the CLI on each machine points at that endpoint. A **local JSON mode** is also
-available for offline use and development.
-
-For deploying the server yourself, see [deployment.md](deployment.md).
+This guide covers installing the TodoList CLI and using it. By **default the CLI
+runs locally** (a small local server backed by a JSON file, no account, offline).
+Connecting the CLI to a **self-hosted remote server** for multi-machine sync is an
+optional, advanced step described at the end (and in full in
+[deployment.md](deployment.md)).
 
 ## Prerequisites
 
 - **Go 1.24 or later** (to install from source) - [Download Go](https://golang.org/dl/)
 - **Supported platforms**: macOS, Linux, Windows
-- **For remote mode**: a reachable gRPC server endpoint and a Supabase project
-  (URL + anon key). See [deployment.md](deployment.md) if you need to set these up.
-- **For local JSON mode**: nothing extra.
+- **Local mode**: nothing extra.
+- **Self-hosted mode (optional)**: your own reachable gRPC server endpoint and an
+  auth provider (Supabase). See [deployment.md](deployment.md).
 
 Verify Go installation:
 ```bash
@@ -36,26 +34,24 @@ On Windows, add `%USERPROFILE%\go\bin` to your PATH environment variable.
 
 ## Installing the binaries
 
-Install the CLI with `go install`:
+Install the CLI and the (local) server with `go install`:
 
 ```bash
-# The CLI client (this is all you need to use a remote server)
-go install github.com/oceane-vlt/todolist-cli/cmd/todo@latest
+go install github.com/oceane-vlt/todolist-cli/cmd/todo@latest    # CLI client
+go install github.com/oceane-vlt/todolist-cli/cmd/server@latest  # gRPC server
 ```
 
-You usually do **not** need to install the server yourself — point the CLI at an
-already-deployed server (see [deployment.md](deployment.md)). If you want to run
-your own server (remotely or locally), also install:
+The `gateway` binary (optional REST gateway, for a future web front-end) is only
+needed when self-hosting:
 
 ```bash
-go install github.com/oceane-vlt/todolist-cli/cmd/server@latest   # gRPC server
-go install github.com/oceane-vlt/todolist-cli/cmd/gateway@latest  # optional REST gateway
+go install github.com/oceane-vlt/todolist-cli/cmd/gateway@latest  # optional
 ```
 
 Binaries are installed to `~/go/bin/` (`%USERPROFILE%\go\bin` on Windows):
 - `todo` - the CLI client
-- `server` - the gRPC server (only needed to self-host)
-- `gateway` - the REST gateway (optional, for a future web front-end)
+- `server` - the gRPC server (local or self-hosted)
+- `gateway` - the REST gateway (optional)
 
 Verify installation:
 ```bash
@@ -64,74 +60,14 @@ which todo      # macOS/Linux: should show the path to todo
 
 ---
 
-## Recommended: connecting the CLI to a remote server
+## Local mode (default)
 
-In remote mode the CLI authenticates against Supabase and dials the gRPC server
-over TLS; your data lives in PostgreSQL, isolated per user.
+By default the CLI talks to a small local server backed by a JSON file — no
+account, no remote dependencies, fully offline. The server defaults to JSON
+storage (`TODO_STORAGE=json`, data in `~/.config/todolist/data.json`), and when
+bound to loopback it runs with **authentication off**.
 
-### Client configuration (environment variables)
-
-Set these in your shell profile (`~/.zshrc`, `~/.bashrc`) or a local `.env`:
-
-| Variable | Required | Role |
-| --- | --- | --- |
-| `TODO_SERVER_ENDPOINT` | yes (remote) | `host:port` of the gRPC server, e.g. `<your-app>.fly.dev:443`. Defaults to `127.0.0.1:50051` when unset. |
-| `TODO_TLS` | yes (remote) | Set to `1`/`true` to dial over TLS and validate the server certificate. Required for a public endpoint. |
-| `SUPABASE_URL` | yes (remote) | Supabase project base URL, e.g. `https://<project-ref>.supabase.co`. The CLI appends the `/auth/v1` GoTrue prefix itself. |
-| `SUPABASE_ANON_KEY` | yes (remote) | Public anon / publishable key, sent as the `apikey` header to Supabase Auth. |
-| `TODO_TLS_CA_FILE` | optional | Path to a custom CA certificate (for a self-signed / private CA server). |
-| `TODO_TLS_SERVER_NAME` | optional | Override the expected TLS server name (SNI / cert hostname). |
-| `TODO_CALL_TIMEOUT` | optional | Per-call timeout (Go duration, e.g. `5s`). |
-
-> Use generic placeholders here. Do not commit your real Supabase URL/anon key
-> or your server hostname into shared config. The anon key is "public" but still
-> keep it out of the repo. The `DATABASE_URL` and JWT secrets live **only on the
-> server**, never on the CLI machine.
-
-Example (public server with a valid certificate):
-```bash
-export TODO_SERVER_ENDPOINT="<your-app>.fly.dev:443"
-export TODO_TLS=1
-export SUPABASE_URL="https://<project-ref>.supabase.co"
-export SUPABASE_ANON_KEY="<your-anon-key>"
-```
-
-### Create an account and verify
-
-```bash
-# Create an account / sign in (password entered at a masked prompt)
-todo signup --email you@example.com
-todo login  --email you@example.com
-
-# Use the CLI — data is stored remotely, scoped to your account
-todo create test "First item" "Second item"
-todo show test
-todo list
-
-# If you already had local data.json lists, import them once into the remote store:
-todo migrate
-```
-
-Credentials are stored locally in `~/.config/todolist/credentials.json` (`0600`).
-Run `todo logout` to delete them.
-
-See [usage.md](usage.md) for the full command reference and
-[deployment.md](deployment.md) to stand up the server, Supabase and Postgres.
-
----
-
-## Local JSON mode (offline / development)
-
-For offline use or development you can run a local server backed by a JSON file —
-no account, no remote dependencies. The server defaults to JSON storage
-(`TODO_STORAGE=json`, data in `~/.config/todolist/data.json`), and when bound to
-loopback it runs with **auth off**.
-
-> This is an optional convenience for development, **not** the recommended way to
-> run the project day-to-day. For real multi-machine use, prefer the remote mode
-> above.
-
-Start a local server:
+Start a local server (from a clone of the repo):
 ```bash
 make dev   # rebuilds, reinstalls, starts a local server on 127.0.0.1:50051 (JSON, auth off)
 ```
@@ -165,9 +101,64 @@ On macOS you can have the local server start automatically on login via launchd:
 make install-service
 ```
 
-See [daemon-setup.md](daemon-setup.md) for details and troubleshooting. This is a
-**local self-hosted** convenience and is optional — the recommended deployment is
-remote (see [deployment.md](deployment.md)).
+See [daemon-setup.md](daemon-setup.md) for details and troubleshooting.
+
+---
+
+## Self-hosting: connecting the CLI to a remote server (optional)
+
+If you want the same lists across several machines, you can run **your own** server
+(PostgreSQL + authentication, deployed over TLS) and point the CLI at it. This is an
+opt-in setup you host yourself; the full step-by-step (database, auth provider,
+deploying the server) is in **[deployment.md](deployment.md)**.
+
+Once your server is deployed, configure the CLI on each machine. Set these in your
+shell profile (`~/.zshrc`, `~/.bashrc`) or a local `.env`:
+
+| Variable | Required | Role |
+| --- | --- | --- |
+| `TODO_SERVER_ENDPOINT` | yes (remote) | `host:port` of the gRPC server, e.g. `<your-app>.fly.dev:443`. Defaults to `127.0.0.1:50051` when unset (local mode). |
+| `TODO_TLS` | yes (remote) | Set to `1`/`true` to dial over TLS and validate the server certificate. Required for a public endpoint. |
+| `SUPABASE_URL` | yes (remote) | Supabase project base URL, e.g. `https://<project-ref>.supabase.co`. The CLI appends the `/auth/v1` GoTrue prefix itself. |
+| `SUPABASE_ANON_KEY` | yes (remote) | Public anon / publishable key, sent as the `apikey` header to Supabase Auth. |
+| `TODO_TLS_CA_FILE` | optional | Path to a custom CA certificate (for a self-signed / private CA server). |
+| `TODO_TLS_SERVER_NAME` | optional | Override the expected TLS server name (SNI / cert hostname). |
+| `TODO_CALL_TIMEOUT` | optional | Per-call timeout (Go duration, e.g. `5s`). |
+
+> Use your **own** values. Do not commit your real Supabase URL/anon key or your
+> server hostname into the repo — they are personal to your deployment and belong
+> in your local shell config or `.env`. The anon key is "public" but still keep it
+> out of the repo. The `DATABASE_URL` and JWT secrets live **only on the server**,
+> never on the CLI machine.
+
+Example (your own public server with a valid certificate):
+```bash
+export TODO_SERVER_ENDPOINT="<your-app>.fly.dev:443"
+export TODO_TLS=1
+export SUPABASE_URL="https://<project-ref>.supabase.co"
+export SUPABASE_ANON_KEY="<your-anon-key>"
+```
+
+Then create an account and verify:
+```bash
+# Create an account / sign in (password entered at a masked prompt)
+todo signup --email you@example.com
+todo login  --email you@example.com
+
+# Use the CLI — data is stored remotely, scoped to your account
+todo create test "First item" "Second item"
+todo show test
+todo list
+
+# If you already had local data.json lists, import them once into the remote store:
+todo migrate
+```
+
+Credentials are stored locally in `~/.config/todolist/credentials.json` (`0600`).
+Run `todo logout` to delete them.
+
+See [usage.md](usage.md) for the full command reference and
+[deployment.md](deployment.md) to stand up the server, auth provider and database.
 
 ---
 
@@ -175,15 +166,14 @@ remote (see [deployment.md](deployment.md)).
 
 Where your data lives depends on the mode:
 
-- **Remote mode (recommended)**: your todo lists are stored in the server's
-  **PostgreSQL** database (Neon), isolated per user. Nothing is kept on the CLI
-  machine except your auth tokens in `~/.config/todolist/credentials.json` (`0600`).
-- **Local JSON mode**: data is stored in `~/.config/todolist/data.json`. This
-  directory is created automatically on first use, and is also where the
-  credentials file lives.
+- **Local mode (default)**: data is stored in `~/.config/todolist/data.json`. This
+  directory is created automatically on first use.
+- **Self-hosted mode (optional)**: your todo lists are stored in the server's
+  **PostgreSQL** database, isolated per user. Nothing is kept on the CLI machine
+  except your auth tokens in `~/.config/todolist/credentials.json` (`0600`).
 
-The server decides which storage backend to use via the `TODO_STORAGE`
-environment variable (`json` by default, `postgres` for the remote backend with a
+The server decides which storage backend to use via the `TODO_STORAGE` environment
+variable (`json` by default, `postgres` for the remote backend with a
 `DATABASE_URL`). See [deployment.md](deployment.md).
 
 ## Troubleshooting
@@ -199,14 +189,14 @@ Make it permanent by adding the line to `~/.zshrc` or `~/.bashrc`.
 
 ### "connection refused" or "unavailable"
 
-- **Remote mode**: check `TODO_SERVER_ENDPOINT` points at the right `host:port`,
-  that `TODO_TLS=1` is set for a public endpoint, and that the server is deployed
-  and reachable. A free-tier machine may be asleep and take a few seconds to wake
-  on the first request.
 - **Local mode**: the local server isn't running — start it with `make dev` and
   check `make status`.
+- **Self-hosted mode**: check `TODO_SERVER_ENDPOINT` points at the right `host:port`,
+  that `TODO_TLS=1` is set for a public endpoint, and that your server is deployed
+  and reachable. A free-tier machine may be asleep and take a few seconds to wake
+  on the first request.
 
-### "unauthenticated" / login errors (remote mode)
+### "unauthenticated" / login errors (self-hosted mode)
 
 - Verify `SUPABASE_URL` and `SUPABASE_ANON_KEY` are set and match your project.
 - If Supabase has "Confirm email" enabled, confirm the email after `todo signup`,
@@ -248,19 +238,19 @@ make uninstall
 rm -rf ~/.config/todolist/
 ```
 
-Removing `~/.config/todolist/` only deletes local JSON data and your credentials;
-remote data in PostgreSQL is unaffected.
+Removing `~/.config/todolist/` deletes local JSON data and your credentials; any
+remote data in a self-hosted PostgreSQL database is unaffected.
 
 ## Next Steps
 
 - Read the [Usage Guide](usage.md) to learn all available commands
-- See [deployment.md](deployment.md) to deploy your own server
+- See [deployment.md](deployment.md) to self-host your own server
 - Check [TODO.md](../TODO.md) for planned features
 
 ## Getting Help
 
 If you encounter issues:
-1. For local mode, check the logs: `tail -f /tmp/todoserver.log`
-2. Verify your client configuration (`TODO_SERVER_ENDPOINT`, `TODO_TLS`, `SUPABASE_*`)
+1. In local mode, check the logs: `tail -f /tmp/todoserver.log`
+2. Verify your configuration (local: server running; self-hosted: `TODO_SERVER_ENDPOINT`, `TODO_TLS`, `SUPABASE_*`)
 3. Confirm the server is reachable / running
 4. Open an issue on GitHub with log output and error messages

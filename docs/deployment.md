@@ -1,10 +1,16 @@
-# Remote server deployment (Fly.io)
+# Self-hosting guide — deploy your own server (Fly.io)
 
-Phase 6 of [`implementation-plan.md`](./implementation-plan.md). Replaces the
-local launchd daemon ([`daemon-setup.md`](./daemon-setup.md)): the gRPC server
-runs on a free-tier PaaS (Fly.io), reachable publicly over TLS, and the CLI no
-longer starts a server. See the target architecture in
-[`target-architecture.md`](./target-architecture.md) §6.
+This is the **optional** self-hosting path: instead of the default local mode, you
+run **your own** gRPC server on a remote host (here a free-tier PaaS, Fly.io),
+reachable over TLS and backed by PostgreSQL + an auth provider, so you can use the
+same lists from several machines. The CLI on each machine then points at your
+endpoint instead of a local server.
+
+Everything below uses **placeholders** — fill in your own database, auth provider,
+app name and secrets; none of your deployment's real values should be committed to
+the repo. See the target architecture in
+[`target-architecture.md`](./target-architecture.md) §6, and the local mode in
+[`installation.md`](./installation.md) / [`daemon-setup.md`](./daemon-setup.md).
 
 ## What ships where
 

@@ -1,130 +1,110 @@
 # TodoList CLI
 
-A modern **command-line todo list manager** built with **Go** and **gRPC**, with
-**remote sync**: your lists live in a managed **PostgreSQL** database (Neon) behind
-a gRPC server, so you can sign in from several machines and see the same data.
+A command-line todo list manager written in **Go**. By default it runs **entirely
+on your machine**: your lists are stored in a local JSON file, with no account and
+no network required.
 
-Authentication is handled by **Supabase Auth** (email/password): the CLI obtains a
-JWT, the server validates it and **isolates each user's data by `user_id`**. The
-server is **deployable to a free-tier PaaS** (Fly.io) and reachable over TLS. A
-**REST gateway** (gRPC-Gateway) is included so a future web front-end can reuse the
-same backend.
-
-A **local JSON mode** is also available for offline/dev use (no account, data in a
-local file).
+If you want to access the **same lists from several machines**, you can optionally
+**self-host a small server** (PostgreSQL + authentication) and point the CLI at it.
+See [Self-hosting](#self-hosting-sync-across-machines-optional). The project does
+**not** ship a shared hosted service — any remote setup is one you run yourself.
 
 ## Features
 
-- 🔄 Remote sync — lists stored in managed **PostgreSQL** (Neon) via a gRPC server
-- 🔐 Authentication with **Supabase Auth** (email/password), JWT validated server-side
-- 👥 Per-user data isolation (each account sees only its own lists)
-- 💻 Multi-machine access — log in from any device, same data
-- ☁️ Server deployable to a free-tier PaaS (**Fly.io**) over **TLS**
-- 🌐 REST gateway (gRPC-Gateway) for a future web front-end
-- 📝 Create and manage multiple todo lists; add, update, delete items
-- ✅ Mark items as complete (soft-completion — completed items are kept for history,
-  not deleted)
-- 💾 Optional **local JSON mode** for offline/dev use
+- 📝 Create and manage multiple todo lists; add, update, and delete items
+- ✅ Mark items complete — *soft-completion*: completed items are kept for history,
+  not deleted (view them with `todo show <name> -H`)
+- 💾 **Local by default** — data in a local JSON file, no account, works offline
+- 🔄 **Optional self-hosted sync** — run your own server backed by PostgreSQL to use
+  the same lists across machines
+- 🔐 When self-hosting: authentication with per-user data isolation, TLS, and a REST
+  gateway (gRPC-Gateway) for a future web front-end
 
-## Quick Start
+## Quick Start (local)
 
-### Installation
-
-**Platforms**: macOS, Linux, Windows
+**Platforms**: macOS, Linux, Windows · **Requires** Go 1.24+ to install from source.
 
 ```bash
-# Install the CLI
+# Install the CLI and the local server
 go install github.com/oceane-vlt/todolist-cli/cmd/todo@latest
+go install github.com/oceane-vlt/todolist-cli/cmd/server@latest
 ```
 
-This installs the `todo` binary to `~/go/bin/` (or `%USERPROFILE%\go\bin` on
-Windows). Make sure that directory is in your `PATH`. You usually do **not** need
-to install the server yourself — point the CLI at an already-deployed server (see
-below). To run your own server, also `go install .../cmd/server` (and
-`.../cmd/gateway` for REST).
+Make sure `~/go/bin` (or `%USERPROFILE%\go\bin` on Windows) is in your `PATH`.
 
-See [docs/installation.md](docs/installation.md) for the full installation and
-configuration guide.
-
-### Using a remote server (recommended)
-
-Point the CLI at the server and at your Supabase project, then create an account
-and log in:
+The CLI talks to a small local server. From a clone of the repo, start it once,
+then use the CLI:
 
 ```bash
-# Where the gRPC server lives, and how to reach Supabase Auth
-export TODO_SERVER_ENDPOINT="<your-app>.fly.dev:443"
-export TODO_TLS=1                                   # validate the server certificate
-export SUPABASE_URL="https://<project-ref>.supabase.co"
-export SUPABASE_ANON_KEY="<your-anon-key>"
+make dev        # start the local server (127.0.0.1:50051, JSON storage, no account)
 
-# Create an account / sign in (password entered at a masked prompt)
-todo signup --email you@example.com
-todo login  --email you@example.com
-
-# Use the CLI — data is stored remotely, scoped to your account
 todo create shopping "Buy milk" "Buy eggs"
 todo list
 todo show shopping
-
-# If you have existing local data.json lists, import them once:
-todo migrate
-
-# Sign out (removes locally stored credentials)
-todo logout
-```
-
-Don't have a server yet? See [docs/deployment.md](docs/deployment.md) to deploy
-one to Fly.io and provision Supabase + Postgres (Neon).
-
-### Local JSON mode (offline / dev)
-
-For offline use or development you can run a local server backed by a JSON file —
-no account required. The server defaults to JSON storage
-(`~/.config/todolist/data.json`), and when bound to loopback it runs with auth off:
-
-```bash
-make dev        # start a local server (127.0.0.1:50051, JSON storage, auth off)
-todo create mylist "first item"
-todo list
-make stop       # stop the local server
-```
-
-On macOS you can run that local server automatically via launchd — see
-[docs/daemon-setup.md](docs/daemon-setup.md) (optional; the remote deployment above
-is the recommended setup).
-
-### Basic Usage Example
-
-```bash
-# List all todo lists
-todo list
-
-# Create a new list with items
-todo create shopping "Buy milk" "Buy eggs" "Buy bread"
-
-# Show a specific list
-todo show shopping
-
-# Add items to an existing list
-todo add shopping "Buy cheese" "Buy butter"
-
-# Mark items as complete (interactive; completed items stay in history)
-todo complete shopping
-
-# Delete an entire list
+todo add shopping "Buy bread"
+todo complete shopping      # interactive; completed items are kept in history
 todo delete shopping
+
+make stop       # stop the local server when done
 ```
 
-See [docs/usage.md](docs/usage.md) for the complete CLI reference.
+Data is stored locally in `~/.config/todolist/data.json` — no login, nothing leaves
+your machine. On macOS you can have the local server start automatically on login;
+see [docs/daemon-setup.md](docs/daemon-setup.md) (optional).
+
+See [docs/usage.md](docs/usage.md) for the full command reference and
+[docs/installation.md](docs/installation.md) for more details.
+
+## Self-hosting (sync across machines, optional)
+
+To use the same lists on several computers, you can run **your own** server backed
+by a managed PostgreSQL database, with authentication so each account only sees its
+own data. The CLI then points at your server instead of the local one.
+
+This is an advanced, opt-in setup that **you host yourself** — there is no shared
+service provided by this project, and no specific deployment details are committed
+to this repo (every value is your own and stays on your machine).
+
+➡️ Full step-by-step guide: **[docs/deployment.md](docs/deployment.md)**
+
+In short, you would:
+
+1. Provision a managed **PostgreSQL** database (e.g. a free tier) and apply the
+   schema in [`migrations/`](migrations/).
+2. Set up an **authentication** provider (Supabase Auth, email/password).
+3. Deploy the **`server`** somewhere reachable (e.g. a free-tier PaaS like Fly.io),
+   over **TLS**.
+4. Configure the CLI with your own endpoint and credentials, then `todo signup` /
+   `todo login`. Existing local lists can be imported once with `todo migrate`.
+
+All the exact commands and environment variables are in
+[docs/deployment.md](docs/deployment.md).
+
+## Command reference (works the same in both modes)
+
+```bash
+todo list                                   # list all your todo lists
+todo create shopping "Buy milk" "Buy eggs"  # create a list (optionally with items)
+todo show shopping                          # show non-completed items
+todo show shopping -H                       # show full history (incl. completed)
+todo add shopping "Buy cheese"              # add items to a list
+todo update shopping                        # edit an item (interactive)
+todo complete shopping                      # mark items complete (interactive)
+todo delete shopping                        # delete an entire list
+```
+
+When self-hosting, three extra commands manage your account:
+`todo signup`, `todo login`, `todo logout` (and `todo migrate` to import local data).
+
+See [docs/usage.md](docs/usage.md) for the complete reference.
 
 ## Documentation
 
-- [Installation Guide](docs/installation.md) - Installation and client configuration
-- [Usage Guide](docs/usage.md) - Complete CLI command reference
-- [Deployment](docs/deployment.md) - Deploy the server remotely (Fly.io + Supabase + Postgres)
-- [Daemon Setup](docs/daemon-setup.md) - Run a local self-hosted server via launchd (macOS, optional)
-- [Target Architecture](docs/target-architecture.md) - Architecture decision record
+- [Installation Guide](docs/installation.md) — install and (optionally) configure for a remote server
+- [Usage Guide](docs/usage.md) — complete CLI command reference
+- [Self-hosting / Deployment](docs/deployment.md) — run your own server (PostgreSQL + auth + TLS)
+- [Daemon Setup](docs/daemon-setup.md) — auto-start the local server on macOS via launchd (optional)
+- [Target Architecture](docs/target-architecture.md) — design / architecture decision record
 
 ## Project Structure
 
@@ -132,50 +112,44 @@ See [docs/usage.md](docs/usage.md) for the complete CLI reference.
 todolist-cli/
 ├── cmd/
 │   ├── todo/          # CLI client commands
-│   ├── server/        # gRPC server
+│   ├── server/        # gRPC server (local or self-hosted)
 │   ├── gateway/       # REST gateway (gRPC-Gateway) for a future web front-end
 │   └── notification/  # notification helper (see its README)
 ├── proto/             # Protocol Buffer definitions
 ├── libs/
-│   ├── storage/       # Data persistence (JSON local / Postgres remote)
-│   ├── auth/          # Server-side JWT verification
+│   ├── storage/       # Data persistence (JSON local / PostgreSQL remote)
+│   ├── auth/          # Server-side JWT verification (self-hosted mode)
 │   └── clientauth/    # CLI-side auth (Supabase / dev) and token storage
 ├── server/            # gRPC server internals (interceptors, config)
-├── migrations/        # SQL schema for the Postgres backend
+├── migrations/        # SQL schema for the PostgreSQL backend
 ├── scripts/           # Installation and service scripts
 └── docs/              # Documentation
 ```
 
 ## Architecture
 
-The CLI never talks to the database directly; it always goes through the gRPC
-server, which is the single guardian of the data.
+The CLI never talks to storage directly; it always goes through a gRPC server.
 
-- **CLI Client** (`cmd/todo`): authenticates with Supabase Auth, stores its tokens
-  locally (`~/.config/todolist/credentials.json`, `0600`), and attaches the access
-  JWT as gRPC metadata on each call.
-- **gRPC Server** (`cmd/server`): validates the JWT, derives the `user_id`, and
-  scopes every operation and SQL query to that user. Talks to **Postgres** (Neon)
-  over `pgx`. Runs over **TLS** when deployed remotely.
-- **Storage** (`libs/storage`): selected by `TODO_STORAGE` — `postgres` (remote,
-  multi-user) or `json` (local file, default for dev).
-- **REST Gateway** (`cmd/gateway`): exposes the same RPCs as REST/JSON for a future
-  web front-end, reusing the one backend.
-- **Protocol Buffers** (`proto/`): defines the contract between client and server.
+- **Local mode (default):** a lightweight `server` runs on `127.0.0.1`, stores data
+  in `~/.config/todolist/data.json`, and (on loopback) runs with authentication off.
+- **Self-hosted mode (optional):** the `server` runs on a remote host over TLS,
+  stores data in **PostgreSQL**, validates a JWT from your auth provider, derives a
+  `user_id`, and scopes every operation and SQL query to that user. A REST
+  **gateway** (`cmd/gateway`) exposes the same RPCs as REST/JSON for a future web
+  front-end.
 
-Remote data is stored in PostgreSQL, isolated per user. In local JSON mode, data is
-stored in `~/.config/todolist/data.json`. See
+The storage backend is selected by `TODO_STORAGE` (`json` by default, `postgres`
+for the remote backend). See
 [docs/target-architecture.md](docs/target-architecture.md) for the full design.
 
 ## Requirements
 
-- Go 1.24 or later (to install the CLI from source)
+- Go 1.24 or later (to install from source)
 - macOS, Linux, or Windows
-- **For remote use**: a reachable gRPC server endpoint (`TODO_SERVER_ENDPOINT`) and
-  a Supabase project (`SUPABASE_URL`, `SUPABASE_ANON_KEY`) to authenticate against —
-  see [docs/deployment.md](docs/deployment.md)
-- **For local JSON mode**: nothing extra (data in a local file)
-- Note: the optional launchd daemon (automatic local server startup) is macOS-only
+- **Local mode:** nothing else
+- **Self-hosting:** your own PostgreSQL database, an auth provider (Supabase), and a
+  host for the server — see [docs/deployment.md](docs/deployment.md)
+- Note: the optional launchd auto-start (local server) is macOS-only
 
 ## License
 
