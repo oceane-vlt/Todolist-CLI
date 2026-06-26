@@ -4,27 +4,22 @@ Complete reference for all TodoList CLI commands.
 
 ## Prerequisites
 
-The CLI talks to a **remote gRPC server** that stores your data in Postgres and
-authenticates you against Supabase. For day-to-day use you need to:
+By **default the CLI runs locally**: it talks to a small local gRPC server backed
+by a JSON file, with no account. Start the local server once, then use the
+commands below:
 
-1. Point the CLI at a server and configure authentication (see
-   [installation.md](installation.md) for the full list of variables):
-   ```bash
-   export TODO_SERVER_ENDPOINT="<your-app>.fly.dev:443"
-   export TODO_TLS=1
-   export SUPABASE_URL="https://<project-ref>.supabase.co"
-   export SUPABASE_ANON_KEY="<your-anon-key>"
-   ```
-2. Be logged in:
-   ```bash
-   todo signup    # first time only
-   todo login
-   ```
+```bash
+make dev   # start a local server on 127.0.0.1:50051 (JSON storage, auth off)
+```
 
-> **Local JSON mode (optional, dev/offline):** you can instead run a loopback
-> server backed by a local `data.json` file (`TODO_STORAGE=json`, the default)
-> with authentication disabled. Start it with `make dev`. This mode is meant for
-> development and offline use; see [daemon-setup.md](daemon-setup.md) and
+With no remote environment variables set, the CLI dials `127.0.0.1:50051`
+automatically — nothing else to configure. See [installation.md](installation.md).
+
+> **Self-hosted mode (optional):** to sync the same lists across machines you can
+> point the CLI at **your own** remote server (PostgreSQL + authentication). Then
+> you also set `TODO_SERVER_ENDPOINT`, `TODO_TLS`, `SUPABASE_URL`,
+> `SUPABASE_ANON_KEY` and log in. The account commands (`signup`/`login`/`logout`)
+> and `migrate` only apply in that mode. Full setup in
 > [deployment.md](deployment.md).
 
 ## Quick Reference
@@ -44,11 +39,14 @@ authenticates you against Supabase. For day-to-day use you need to:
 | `todo delete <name>` | Delete an entire list (permanent) |
 | `todo migrate` | Import local `data.json` lists into the remote Postgres store |
 
-## Authentication
+## Authentication (self-hosted mode only)
 
-Your data is isolated per user: the server validates your JWT, derives your
-`user_id` from it, and scopes every query to your account. You must be logged in
-before the regular commands will work against a remote server.
+> These commands only apply when you point the CLI at **your own remote server**.
+> In local mode (the default) there is no account and no login.
+
+When self-hosting, your data is isolated per user: the server validates your JWT,
+derives your `user_id` from it, and scopes every query to your account. You must be
+logged in before the regular commands will work against your remote server.
 
 ### Sign Up
 
@@ -200,7 +198,7 @@ interruption is safe. On success the local file is renamed to `data.json.bak`
 
 ### Daily Tasks
 ```bash
-todo login
+# (self-hosted mode: run `todo login` first)
 todo create today "Review emails" "Team meeting" "Finish report"
 todo show today
 todo complete today              # Interactive: select items to mark done
@@ -249,13 +247,13 @@ your environment.
 
 Where your data lives depends on the mode:
 
-- **Remote mode (recommended):** your todo lists live in the server's **Postgres
-  database** (e.g. Neon), isolated per user. The only thing stored locally is
-  `~/.config/todolist/credentials.json` (your tokens, mode `0600`). Back up /
-  restore is handled by your Postgres provider, not by copying a local file.
-- **Local JSON mode (dev/offline):** lists are stored in
-  `~/.config/todolist/data.json` (selected by `TODO_STORAGE=json`, the default
-  when no remote server is configured).
+- **Local mode (default):** lists are stored in `~/.config/todolist/data.json`
+  (selected by `TODO_STORAGE=json`, the default when no remote server is
+  configured).
+- **Self-hosted mode (optional):** your todo lists live in your server's
+  **PostgreSQL** database, isolated per user. The only thing stored locally is
+  `~/.config/todolist/credentials.json` (your tokens, mode `0600`). Backup /
+  restore is handled by your PostgreSQL provider, not by copying a local file.
 
 Back up the local JSON file (local mode only):
 ```bash
