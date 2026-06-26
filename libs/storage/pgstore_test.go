@@ -125,7 +125,6 @@ func TestPgStoreParity(t *testing.T) {
 	// runBoth executes fn against both stores and reports per-backend errors.
 	type result struct {
 		items []*todo.Item
-		sizes []*todo.ListSize
 		err   error
 	}
 	run := func(t *testing.T, name string, fn func(s Store) result) (jsRes, pgRes result) {

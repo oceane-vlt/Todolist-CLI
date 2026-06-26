@@ -70,10 +70,7 @@ func main() {
 		log.Fatal(err)
 	}
 	defer func(conn *grpc.ClientConn) {
-		err := conn.Close()
-		if err != nil {
-
-		}
+		_ = conn.Close()
 	}(conn)
 
 	grpcClient = todo.NewTodoListServiceClient(conn)

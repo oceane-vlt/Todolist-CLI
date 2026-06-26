@@ -13,14 +13,11 @@ func notCompletedItemsUiList(items []*todo.Item){
 }
 
 func UpdateUi(items []*todo.Item, title string) []int32{
-	completed := []*todo.Item{}
 	notCompleted := []*todo.Item{}
 
 	mapping := []int32{}
 	for i, item := range items {
-		if item.Completed {
-			completed = append(completed, item)
-		} else {
+		if !item.Completed {
 			notCompleted = append(notCompleted, item)
 			mapping = append(mapping, int32(i))
 		}

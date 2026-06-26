@@ -123,7 +123,7 @@ func (s *PgStore) CreateTodoList(ctx context.Context, title string, items []*tod
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	existing, err := s.findListID(ctx, tx, title)
 	if err != nil {
@@ -190,7 +190,7 @@ func (s *PgStore) DeleteTodoList(ctx context.Context, titles []string) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	// First validate every title exists (mirrors JSONStore: all-or-nothing).
 	for _, title := range titles {
@@ -240,7 +240,7 @@ func (s *PgStore) DeleteTodoListItems(ctx context.Context, title string, indices
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	listID, err := s.findListID(ctx, tx, title)
 	if err != nil {
@@ -280,7 +280,7 @@ func (s *PgStore) UpdateTodoListData(ctx context.Context, title string, newItems
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	listID, err := s.findListID(ctx, tx, title)
 	if err != nil {
@@ -315,7 +315,7 @@ func (s *PgStore) UpdateTodoListItemData(ctx context.Context, title string, item
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	listID, err := s.findListID(ctx, tx, title)
 	if err != nil {

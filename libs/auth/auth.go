@@ -52,11 +52,6 @@ type Verifier interface {
 	Verify(token string) (Identity, error)
 }
 
-// emailClaim is the private JWT claim carrying the user's email. It is embedded
-// in the signed token so the server can trust it (it never comes from a
-// client-supplied field, per docs/target-architecture.md §4.1).
-const emailClaim = "email"
-
 // tokenClaims are the registered claims plus the private email claim. Keeping
 // email in the signed payload is what makes just-in-time user provisioning
 // non-spoofable.
