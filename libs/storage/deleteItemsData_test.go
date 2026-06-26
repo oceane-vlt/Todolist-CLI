@@ -22,6 +22,7 @@ func TestDeleteItems(t *testing.T) {
 			indicesToDelete: []int32{1},
 			expectedResult: []TodoItem{
 				{Title: "Task 1", Description: "First task"},
+				{Title: "Task 2", Description: "Second task", Completed: true},
 				{Title: "Task 3", Description: "Third task"},
 			},
 		},
@@ -34,6 +35,7 @@ func TestDeleteItems(t *testing.T) {
 			},
 			indicesToDelete: []int32{0},
 			expectedResult: []TodoItem{
+				{Title: "Task 1", Description: "First task", Completed: true},
 				{Title: "Task 2", Description: "Second task"},
 				{Title: "Task 3", Description: "Third task"},
 			},
@@ -49,6 +51,7 @@ func TestDeleteItems(t *testing.T) {
 			expectedResult: []TodoItem{
 				{Title: "Task 1", Description: "First task"},
 				{Title: "Task 2", Description: "Second task"},
+				{Title: "Task 3", Description: "Third task", Completed: true},
 			},
 		},
 		{
@@ -61,7 +64,9 @@ func TestDeleteItems(t *testing.T) {
 			},
 			indicesToDelete: []int32{0, 2},
 			expectedResult: []TodoItem{
+				{Title: "Task 1", Description: "First task", Completed: true},
 				{Title: "Task 2", Description: "Second task"},
+				{Title: "Task 3", Description: "Third task", Completed: true},
 				{Title: "Task 4", Description: "Fourth task"},
 			},
 		},
@@ -72,7 +77,10 @@ func TestDeleteItems(t *testing.T) {
 				{Title: "Task 2", Description: "Second task"},
 			},
 			indicesToDelete: []int32{0, 1},
-			expectedResult:  []TodoItem{},
+			expectedResult: []TodoItem{
+				{Title: "Task 1", Description: "First task", Completed: true},
+				{Title: "Task 2", Description: "Second task", Completed: true},
+			},
 		},
 		{
 			name:            "delete from empty list",
@@ -102,6 +110,7 @@ func TestDeleteItems(t *testing.T) {
 			indicesToDelete: []int32{1, 1},
 			expectedResult: []TodoItem{
 				{Title: "Task 1", Description: "First task"},
+				{Title: "Task 2", Description: "Second task", Completed: true},
 				{Title: "Task 3", Description: "Third task"},
 			},
 		},
@@ -117,7 +126,9 @@ func TestDeleteItems(t *testing.T) {
 			indicesToDelete: []int32{1, 3},
 			expectedResult: []TodoItem{
 				{Title: "Task 1", Description: "First task"},
+				{Title: "Task 2", Description: "Second task", Completed: true},
 				{Title: "Task 3", Description: "Third task"},
+				{Title: "Task 4", Description: "Fourth task", Completed: true},
 				{Title: "Task 5", Description: "Fifth task"},
 			},
 		},

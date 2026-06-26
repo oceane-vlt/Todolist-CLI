@@ -1,0 +1,29 @@
+# buf code generation config (Phase 7 - volet B canonique).
+# Génère les stubs Go/gRPC + le stub gateway REST/JSON (.gw.pb.go).
+#
+# Prérequis (outillage NON présent dans cet environnement, à installer par
+# l'utilisateur, cf. docs/grpc-gateway.md) :
+#   go install github.com/bufbuild/buf/cmd/buf@latest
+#   go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+#   go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+#   go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway@latest
+#
+# Puis : buf dep update && buf generate  (ou `make proto-gateway`).
+#
+# Le stub gateway généré (proto/todoList.pb.gw.pb.go) ajoutera la dépendance Go
+# github.com/grpc-ecosystem/grpc-gateway/v2 ; tant qu'on ne régénère pas, aucun
+# import Go vers ce stub n'existe -> `go build ./...` reste vert.
+version: v2
+plugins:
+  - remote: buf.build/protocolbuffers/go
+    out: .
+    opt:
+      - paths=source_relative
+  - remote: buf.build/grpc/go
+    out: .
+    opt:
+      - paths=source_relative
+  - remote: buf.build/grpc-ecosystem/gateway
+    out: .
+    opt:
+      - paths=source_relative

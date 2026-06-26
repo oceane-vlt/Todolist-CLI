@@ -2,16 +2,63 @@ syntax = "proto3";
 
 package todo;
 
+// Phase 7 (canonical part B): google.api.http annotations to generate a
+// REST/JSON gateway via protoc-gen-grpc-gateway. This REST mapping mirrors 1:1
+// the manual cmd/gateway adapter (part A) that is already operational.
+//
+// IMPORTANT: the "google/api/annotations.proto" import is NOT vendored in this
+// repo. It is resolved by buf (the buf.build/googleapis/googleapis dependency,
+// see buf.yaml) during generation via `make proto` / `make proto-gateway`.
+// As long as this import and the google.api.http annotations are present, the
+// legacy target `make proto-protoc` (plain protoc, go/go-grpc only) FAILS
+// because protoc cannot resolve google/api/annotations.proto (absent from the
+// include path): it is NO LONGER a viable fallback. Generation now MUST go
+// through buf. See docs/grpc-gateway.md §4.
+import "google/api/annotations.proto";
+
 option go_package = "github.com/oceane-vlt/todolist/proto;todo";
 
 service TodoListService {
-    rpc CreateTodoList (CreateTodoListRequest) returns (CreateTodoListResponse){}
-    rpc GetTodoLists (GetTodoListsRequest) returns (GetTodoListsResponse){}
-    rpc ShowTodoListItems (ShowTodoListItemsRequest) returns (ShowTodoListItemsResponse){}
-    rpc DeleteTodoList (DeleteTodoListRequest) returns (DeleteTodoListResponse){}
-    rpc DeleteTodoListItems (DeleteTodoListItemsRequest) returns (DeleteTodoListItemsResponse){}
-    rpc UpdateTodoList (UpdateTodoListRequest) returns (UpdateTodoListResponse){}
-    rpc UpdateTodoListItem (UpdateTodoListItemRequest) returns (UpdateTodoListItemResponse){}
+    rpc CreateTodoList (CreateTodoListRequest) returns (CreateTodoListResponse){
+        option (google.api.http) = {
+            post: "/v1/lists"
+            body: "*"
+        };
+    }
+    rpc GetTodoLists (GetTodoListsRequest) returns (GetTodoListsResponse){
+        option (google.api.http) = {
+            get: "/v1/lists"
+        };
+    }
+    rpc ShowTodoListItems (ShowTodoListItemsRequest) returns (ShowTodoListItemsResponse){
+        option (google.api.http) = {
+            get: "/v1/lists/{title}/items"
+        };
+    }
+    rpc DeleteTodoList (DeleteTodoListRequest) returns (DeleteTodoListResponse){
+        option (google.api.http) = {
+            delete: "/v1/lists"
+            body: "*"
+        };
+    }
+    rpc DeleteTodoListItems (DeleteTodoListItemsRequest) returns (DeleteTodoListItemsResponse){
+        option (google.api.http) = {
+            delete: "/v1/lists/{title}/items"
+            body: "*"
+        };
+    }
+    rpc UpdateTodoList (UpdateTodoListRequest) returns (UpdateTodoListResponse){
+        option (google.api.http) = {
+            put: "/v1/lists/{title}/items"
+            body: "*"
+        };
+    }
+    rpc UpdateTodoListItem (UpdateTodoListItemRequest) returns (UpdateTodoListItemResponse){
+        option (google.api.http) = {
+            patch: "/v1/lists/{title}/items"
+            body: "*"
+        };
+    }
 }
 
 message UpdateTodoListItemRequest {

@@ -1,0 +1,20 @@
+# Keep the build context small and avoid copying local-only / secret material
+# into the image (the Dockerfile only needs Go sources + go.mod/go.sum).
+.git
+.github
+docs
+certs
+*.pem
+*.key
+*.crt
+*.bak
+data.json
+/todo
+# Ignore the root-level compiled server binary (produced by `make build`),
+# but NOT the server/ source package directory, which the image must build.
+/server
+!/server/
+!/server/**
+fly.toml
+.gitignore
+README.md

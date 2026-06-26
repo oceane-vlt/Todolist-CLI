@@ -7,7 +7,22 @@ data/data.json
 # Compiled binaries (only at root)
 /todo
 /server
+# /server above also matches the server/ source package directory; re-include the
+# package source so the server code is tracked and deployable (Phase 6).
+!/server/
+!/server/**
+# ...but still ignore a server binary built inside the package directory.
 server/server
 
 # Local plist file (generated from template)
 com.todolist.server.plist
+
+# Local TLS material (Phase 4 self-signed certs/keys) — never commit private keys
+/certs/
+*.pem
+*.key
+*.crt
+
+# Local environment file (DATABASE_URL / secrets) — never commit
+.env
+*.env

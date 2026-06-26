@@ -1,6 +1,18 @@
-# Daemon Setup (macOS)
+# Daemon Setup (macOS) — Optional local self-hosting
 
-Guide for running the TodoList server as a launchd service that starts automatically.
+> **This is the LOCAL, self-hosted server mode (macOS `launchd`), and it is now
+> OPTIONAL.** The **recommended** way to run TodoList is against a **remote**
+> server (Fly.io + Postgres/Neon + Supabase auth) — see
+> [`deployment.md`](./deployment.md) for the remote deployment and
+> [`installation.md`](./installation.md) for pointing the CLI at a remote
+> endpoint.
+>
+> You only need this guide if you want to run the server **on your own Mac** and
+> keep your data in the **local JSON** store (`TODO_STORAGE` unset/`json`). That
+> path still works exactly as described below; the choice is yours.
+
+Guide for running the **local** TodoList server as a `launchd` service that
+starts automatically on macOS.
 
 ## What is a launchd service?
 
@@ -102,17 +114,21 @@ launchctl start com.todolist.server
 
 ## Development vs Daemon
 
+Both modes below run the server **locally**. If you instead use a remote server
+(the recommended setup, see [`deployment.md`](./deployment.md)), you do not need
+either of them — the CLI talks to the remote endpoint directly.
+
 ### Development Mode (`make dev`)
 - Manual start/stop
 - Logs to `/tmp/todoserver.log`
 - Easy to restart for testing
-- **Recommended for development**
+- **Recommended when developing locally**
 
 ### Daemon Mode (`make install-service`)
 - Automatic start on login
 - Auto-restart on crash
 - Logs to `~/.config/todolist/`
-- **Recommended for daily use**
+- **Recommended for unattended local self-hosting** (not needed when using a remote server)
 
 ## File Locations
 

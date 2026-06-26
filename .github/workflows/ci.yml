@@ -1,0 +1,105 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build-test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+          cache: true
+
+      - name: Build
+        run: go build ./...
+
+      - name: Vet
+        run: go vet ./...
+
+      # Postgres integration tests skip cleanly when TODO_TEST_DATABASE_URL is
+      # unset, so the default JSON behaviour is fully exercised here without a DB.
+      - name: Test
+        run: go test ./...
+
+  test-postgres:
+    name: Test (Postgres)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: todo
+          POSTGRES_PASSWORD: todo
+          POSTGRES_DB: todo
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U todo"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+          cache: true
+
+      - name: Apply migrations
+        env:
+          PGPASSWORD: todo
+        run: |
+          for f in migrations/*.sql; do
+            psql "postgresql://todo:todo@localhost:5432/todo?sslmode=disable" -v ON_ERROR_STOP=1 -f "$f"
+          done
+
+      # Runs the parity / isolation tests that skip when this URL is unset.
+      - name: Test against Postgres
+        env:
+          TODO_TEST_DATABASE_URL: postgresql://todo:todo@localhost:5432/todo?sslmode=disable
+        run: go test ./libs/storage/...
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+          cache: true
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+
+  secrets-scan:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Guard against a committed secret (Phase 6 risk: DATABASE_URL / JWT secret
+      # / TLS private key). Secrets must only live in the Fly.io secret manager.
+      - name: gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

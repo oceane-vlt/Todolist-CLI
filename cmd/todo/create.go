@@ -45,7 +45,7 @@ var createCmd = &cobra.Command{
 
 		if len(todoItems) == 0 {
 			ui.Success(fmt.Sprintf("Created empty list '%s'", request.Title))
-			ui.Info(fmt.Sprintf("Add items with %s", ui.Command("todo update "+request.Title+" <item>")))
+			ui.Info(fmt.Sprintf("Add items with %s", ui.Command("todo add "+request.Title+" <item>")))
 		} else {
 			ui.Success(fmt.Sprintf("Created list '%s' with %d items", request.Title, len(todoItems)))
 			fmt.Println()
