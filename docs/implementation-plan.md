@@ -1,167 +1,167 @@
-# Plan d'implémentation — TodoList-CLI vers stockage distant
+# Implementation plan — TodoList-CLI toward remote storage
 
-> **Document de planification.** Pas d'implémentation de production : ce document découpe le passage de l'architecture actuelle à l'architecture cible en phases incrémentales, livrables et testables. Les extraits (signatures, commandes, snippets proto/SQL) sont **illustratifs**.
+> **Planning document.** No production implementation: this document breaks down the move from the current architecture to the target architecture into incremental, deliverable, testable phases. The excerpts (signatures, commands, proto/SQL snippets) are **illustrative**.
 >
-> - **Statut** : Proposé.
-> - **Date** : 2026-06-20.
-> - **S'appuie sur** : [`docs/remote-storage-analysis.md`](./remote-storage-analysis.md) (analyse, recommandation §7) et [`docs/target-architecture.md`](./target-architecture.md) (décisions d'architecture).
-> - **Cible** : PostgreSQL managé (Neon) + auth JWT (Supabase Auth) + gRPC/TLS + hébergement Fly.io + gRPC-Gateway (futur web).
+> - **Status**: Proposed.
+> - **Date**: 2026-06-20.
+> - **Builds on**: [`docs/remote-storage-analysis.md`](./remote-storage-analysis.md) (analysis, recommendation §7) and [`docs/target-architecture.md`](./target-architecture.md) (architecture decisions).
+> - **Target**: managed PostgreSQL (Neon) + JWT auth (Supabase Auth) + gRPC/TLS + Fly.io hosting + gRPC-Gateway (future web).
 
-## 1. Principe directeur
+## 1. Guiding principle
 
-- **Incrémental, jamais big-bang.** Chaque phase est **livrable et testable** indépendamment et **ne casse pas** le projet entre deux phases : à tout moment, `go test ./...` passe et le CLI reste utilisable.
-- **Feature flag de stockage** : une variable `TODO_STORAGE=json|postgres` permet de basculer entre l'ancien stockage JSON et le nouveau Postgres pendant toute la transition. Tant que l'implémentation distante n'est pas validée, on reste sur `json` par défaut. Rollback = repasser le flag sur `json`.
-- **Dérisquage local d'abord** : l'auth est testée avec un JWT signé localement **avant** de brancher Supabase ; le TLS est testé avec un certificat auto-signé **avant** de déployer sur Fly.io.
-- **Migration non destructive** : `~/.config/todolist/data.json` n'est jamais supprimé pendant la transition (renommé en `.bak` au plus).
-- **Cohérence documentaire** : le plan respecte la recommandation de l'analyse (§7) et les décisions de l'ADR (choix arrêtés §1, schéma §2, identité via metadata §4, flux auth §5, déploiement §6).
+- **Incremental, never big-bang.** Each phase is independently **deliverable and testable** and **does not break** the project between two phases: at any point, `go test ./...` passes and the CLI stays usable.
+- **Storage feature flag**: a `TODO_STORAGE=json|postgres` variable allows switching between the old JSON storage and the new Postgres one throughout the transition. As long as the remote implementation is not validated, we stay on `json` by default. Rollback = set the flag back to `json`.
+- **Local de-risking first**: auth is tested with a locally-signed JWT **before** wiring Supabase; TLS is tested with a self-signed certificate **before** deploying to Fly.io.
+- **Non-destructive migration**: `~/.config/todolist/data.json` is never deleted during the transition (renamed to `.bak` at most).
+- **Documentation consistency**: the plan respects the analysis recommendation (§7) and the ADR decisions (locked choices §1, schema §2, identity via metadata §4, auth flow §5, deployment §6).
 
-## 2. Vue d'ensemble des phases
+## 2. Overview of phases
 
-| # | Phase | Couches principales | Effort | Dépend de |
+| # | Phase | Main layers | Effort | Depends on |
 | --- | --- | --- | --- | --- |
-| 0 | Abstraction `Store` (interface) | `libs/storage`, `cmd/server` | **S** | — |
-| 1 | Backend Postgres derrière l'interface (mono-user, sans auth/TLS) | `libs/storage`, `go.mod`, migrations SQL, `Makefile` | **M** | 0 |
-| 2 | Multi-utilisateur & isolation `user_id` | `libs/storage`, `cmd/server` | **M** | 1 |
-| 3 | Auth JWT + intercepteur serveur + sous-commandes CLI | `cmd/server`, `cmd/todo`, `go.mod`, `proto` (optionnel) | **M/L** | 2 |
-| 4 | TLS sur le transport | `cmd/server`, `cmd/todo` | **M** | 3 |
-| 5 | Migration `data.json` → Postgres + rétrocompat | `cmd/todo`, `libs/storage` | **M** | 1, 2, 3 |
-| 6 | Hébergement Fly.io + secrets + CI | déploiement, `Makefile`, `.github/workflows`, docs | **M/L** | 1–5 |
-| 7 | gRPC-Gateway + front web (**HORS v1**) | `proto`, déploiement | **L** | 6 |
+| 0 | `Store` abstraction (interface) | `libs/storage`, `cmd/server` | **S** | — |
+| 1 | Postgres backend behind the interface (single-user, no auth/TLS) | `libs/storage`, `go.mod`, SQL migrations, `Makefile` | **M** | 0 |
+| 2 | Multi-user & `user_id` isolation | `libs/storage`, `cmd/server` | **M** | 1 |
+| 3 | JWT auth + server interceptor + CLI subcommands | `cmd/server`, `cmd/todo`, `go.mod`, `proto` (optional) | **M/L** | 2 |
+| 4 | TLS on the transport | `cmd/server`, `cmd/todo` | **M** | 3 |
+| 5 | Migration `data.json` → Postgres + backward compatibility | `cmd/todo`, `libs/storage` | **M** | 1, 2, 3 |
+| 6 | Fly.io hosting + secrets + CI | deployment, `Makefile`, `.github/workflows`, docs | **M/L** | 1–5 |
+| 7 | gRPC-Gateway + web frontend (**OUT OF v1**) | `proto`, deployment | **L** | 6 |
 
-**Ordre recommandé** : 0 → 1 → 2 → 3 → 4 → 5 → 6, puis 7 plus tard (hors première version). Les phases 4 (TLS) et 5 (migration) peuvent se préparer en parallèle de la phase 3 une fois la 2 terminée, mais l'ordre linéaire ci-dessus minimise les risques.
+**Recommended order**: 0 → 1 → 2 → 3 → 4 → 5 → 6, then 7 later (out of the first version). Phases 4 (TLS) and 5 (migration) can be prepared in parallel with phase 3 once phase 2 is done, but the linear order above minimizes risk.
 
-## 3. Phases détaillées
+## 3. Detailed phases
 
-### Phase 0 — Abstraction `Store` (interface)
+### Phase 0 — `Store` abstraction (interface)
 
-- **Objectif** : introduire une interface `Store` dans `libs/storage` qui capture le comportement de persistance actuel, et faire passer `cmd/server` par cette interface. **Aucun changement fonctionnel** : l'implémentation JSON existante devient `JSONStore`, qui satisfait l'interface. C'est la **couture** qui dérisque tout le reste.
-- **Fichiers / couches touchés** : `libs/storage/` (nouveau `store.go` avec l'interface + adaptation des fichiers par-opération `AddData.go`, `createList.go`, `deleteData.go`, `deleteItemsData.go`, `readData.go`, `showData.go`, `UpdateItemData.go`, `common.go`), `cmd/server/main.go` (dépend de l'interface, pas de l'impl concrète).
-- **Dépendances** : aucune.
-- **Validation / tests** : `go test ./...` reste vert (les tests existants `AddData_test.go`, `deleteItemsData_test.go`, `readData_test.go` continuent de passer) ; comportement CLI **identique** à aujourd'hui (smoke test manuel : create/list/show/delete).
-- **Risques & dérisquage** : risque faible. Risque = casser la signature des opérations existantes → garder l'impl JSON inchangée derrière l'interface, refactoring purement mécanique.
-- **Effort** : **S**.
+- **Goal**: introduce a `Store` interface in `libs/storage` that captures the current persistence behavior, and route `cmd/server` through that interface. **No functional change**: the existing JSON implementation becomes `JSONStore`, which satisfies the interface. This is the **seam** that de-risks everything else.
+- **Files / layers touched**: `libs/storage/` (new `store.go` with the interface + adapting the per-operation files `AddData.go`, `createList.go`, `deleteData.go`, `deleteItemsData.go`, `readData.go`, `showData.go`, `UpdateItemData.go`, `common.go`), `cmd/server/main.go` (depends on the interface, not the concrete impl).
+- **Dependencies**: none.
+- **Validation / tests**: `go test ./...` stays green (the existing tests `AddData_test.go`, `deleteItemsData_test.go`, `readData_test.go` keep passing); CLI behavior **identical** to today (manual smoke test: create/list/show/delete).
+- **Risks & de-risking**: low risk. Risk = breaking the signature of existing operations → keep the JSON impl unchanged behind the interface, purely mechanical refactoring.
+- **Effort**: **S**.
 
-> Interface illustrative :
+> Illustrative interface:
 > ```go
 > type Store interface {
 >     GetLists(ctx context.Context) ([]ListSummary, error)
 >     CreateList(ctx context.Context, title string, items []Item) error
->     // ... une méthode par RPC métier existant
+>     // ... one method per existing business RPC
 > }
 > ```
 
-### Phase 1 — Backend Postgres derrière l'interface (mono-user, sans auth/TLS)
+### Phase 1 — Postgres backend behind the interface (single-user, no auth/TLS)
 
-- **Objectif** : ajouter une implémentation `PgStore` (via `pgx`) qui satisfait l'interface `Store`, avec le schéma SQL de l'ADR §2.2 — mais avec un `user_id` **fixe/placeholder** pour cette phase (le multi-user vient en phase 2). Brancher le **feature flag** `TODO_STORAGE=json|postgres`.
-- **Fichiers / couches touchés** : `libs/storage/pgstore.go` (nouveau), migrations SQL (`migrations/0001_init.sql`), sélection de l'impl selon `TODO_STORAGE` (dans `cmd/server/main.go` ou une factory `libs/storage`), `go.mod` (ajout `pgx`), `Makefile` (cible de migration + éventuellement `docker-compose` Postgres local pour les tests).
-- **Dépendances** : Phase 0 (l'interface doit exister).
-- **Validation / tests** : tests d'intégration `PgStore` sur un Postgres local (Docker) ; **tests de parité** comparant le résultat des opérations `JSONStore` vs `PgStore` sur les mêmes entrées ; `TODO_STORAGE=postgres` permet de faire tourner le CLI contre Postgres en mono-user.
-- **Risques & dérisquage** : divergence schéma/modèle entre JSON et SQL → **tests de parité** systématiques ; outillage migrations à trancher (`golang-migrate` vs `sqlc` vs SQL brut) → choisir avant de coder la phase (voir §5).
-- **Effort** : **M**.
+- **Goal**: add a `PgStore` implementation (via `pgx`) that satisfies the `Store` interface, with the SQL schema from ADR §2.2 — but with a **fixed/placeholder** `user_id` for this phase (multi-user comes in phase 2). Wire the **feature flag** `TODO_STORAGE=json|postgres`.
+- **Files / layers touched**: `libs/storage/pgstore.go` (new), SQL migrations (`migrations/0001_init.sql`), impl selection based on `TODO_STORAGE` (in `cmd/server/main.go` or a `libs/storage` factory), `go.mod` (add `pgx`), `Makefile` (migration target + possibly a local Postgres `docker-compose` for tests).
+- **Dependencies**: Phase 0 (the interface must exist).
+- **Validation / tests**: `PgStore` integration tests against a local Postgres (Docker); **parity tests** comparing the result of `JSONStore` vs `PgStore` operations on the same inputs; `TODO_STORAGE=postgres` lets the CLI run against Postgres in single-user mode.
+- **Risks & de-risking**: schema/model divergence between JSON and SQL → systematic **parity tests**; migration tooling to decide (`golang-migrate` vs `sqlc` vs raw SQL) → choose before coding the phase (see §5).
+- **Effort**: **M**.
 
-### Phase 2 — Multi-utilisateur & isolation `user_id`
+### Phase 2 — Multi-user & `user_id` isolation
 
-- **Objectif** : propager un `user_id` (lu depuis le `context.Context`) dans `PgStore` (`WHERE user_id = $1`, clé logique `(user_id, title)`) et dans les handlers de `cmd/server` (scoping). Le `user_id` est encore **injecté en dur / via variable de dev** tant que l'auth (phase 3) n'est pas branchée.
-- **Fichiers / couches touchés** : `libs/storage/pgstore.go` (signatures prennent `userID`, requêtes filtrées), `cmd/server/main.go` (handlers passent le `user_id` du context au store).
-- **Dépendances** : Phase 1.
-- **Validation / tests** : test d'isolation — deux `user_id` distincts ne voient **pas** les listes l'un de l'autre ; `UNIQUE(user_id, title)` autorise le même titre pour deux utilisateurs différents ; les anciens tests restent verts.
-- **Risques & dérisquage** : oubli d'un filtre `user_id` dans une requête (fuite de données) → revue ciblée + test d'isolation couvrant **chaque** RPC.
-- **Effort** : **M**.
+- **Goal**: propagate a `user_id` (read from the `context.Context`) into `PgStore` (`WHERE user_id = $1`, logical key `(user_id, title)`) and into the `cmd/server` handlers (scoping). The `user_id` is still **hard-injected / via a dev variable** as long as auth (phase 3) is not wired.
+- **Files / layers touched**: `libs/storage/pgstore.go` (signatures take `userID`, filtered queries), `cmd/server/main.go` (handlers pass the context `user_id` to the store).
+- **Dependencies**: Phase 1.
+- **Validation / tests**: isolation test — two distinct `user_id`s do **not** see each other's lists; `UNIQUE(user_id, title)` allows the same title for two different users; the old tests stay green.
+- **Risks & de-risking**: a forgotten `user_id` filter in a query (data leak) → targeted review + isolation test covering **every** RPC.
+- **Effort**: **M**.
 
-### Phase 3 — Auth JWT + intercepteur serveur + sous-commandes CLI
+### Phase 3 — JWT auth + server interceptor + CLI subcommands
 
-- **Objectif** : authentifier réellement l'appelant. Côté serveur : un **intercepteur gRPC** valide le JWT (signature + expiration) et injecte le `user_id` dans le `context` (qui alimente la phase 2). Côté CLI : sous-commandes `login` / `signup` / `logout`, stockage du token dans `~/.config/todolist/credentials.json` (perms `0600`), attache `authorization: Bearer <access JWT>` en metadata, refresh transparent sur `Unauthenticated`.
-- **Fichiers / couches touchés** : `cmd/server/main.go` (intercepteur unaire), `cmd/todo/` (commandes `login`/`signup`/`logout`, gestion `credentials.json`, attache du token, logique de refresh), `go.mod` (ajout `golang-jwt`), `proto/todoList.proto` (**optionnel** : `AuthService` Signup/Login/Refresh **uniquement en mode auth maison** ; non nécessaire avec Supabase Auth, cf. ADR §4.2).
-- **Dépendances** : Phase 2 (le `user_id` du context doit déjà scoper le storage).
-- **Validation / tests** : appel **sans** token → `Unauthenticated` ; token **expiré** → `Unauthenticated` puis refresh transparent rejoue l'appel ; token valide → accès aux seules listes de l'utilisateur ; `credentials.json` créé en `0600`.
-- **Risques & dérisquage** : complexité d'intégration Supabase → **dérisquer en local d'abord** avec un JWT signé par une clé de test (mode maison), valider tout le flux intercepteur/refresh, **puis** brancher la validation des JWT Supabase (JWKS/secret). Secret de signature à protéger (env, jamais dans le repo).
-- **Effort** : **M/L**.
+- **Goal**: actually authenticate the caller. Server side: a **gRPC interceptor** validates the JWT (signature + expiration) and injects the `user_id` into the `context` (which feeds phase 2). CLI side: `login` / `signup` / `logout` subcommands, storing the token in `~/.config/todolist/credentials.json` (perms `0600`), attaching `authorization: Bearer <access JWT>` as metadata, transparent refresh on `Unauthenticated`.
+- **Files / layers touched**: `cmd/server/main.go` (unary interceptor), `cmd/todo/` (`login`/`signup`/`logout` commands, `credentials.json` handling, token attachment, refresh logic), `go.mod` (add `golang-jwt`), `proto/todoList.proto` (**optional**: `AuthService` Signup/Login/Refresh **only in home-grown auth mode**; not needed with Supabase Auth, cf. ADR §4.2).
+- **Dependencies**: Phase 2 (the context `user_id` must already scope storage).
+- **Validation / tests**: call **without** a token → `Unauthenticated`; **expired** token → `Unauthenticated` then transparent refresh replays the call; valid token → access only to the user's own lists; `credentials.json` created with `0600`.
+- **Risks & de-risking**: Supabase integration complexity → **de-risk locally first** with a JWT signed by a test key (home-grown mode), validate the whole interceptor/refresh flow, **then** wire Supabase JWT validation (JWKS/secret). Signing secret to protect (env, never in the repo).
+- **Effort**: **M/L**.
 
-### Phase 4 — TLS sur le transport
+### Phase 4 — TLS on the transport
 
-- **Objectif** : chiffrer le transport gRPC (fin de `insecure.NewCredentials()`). Côté serveur : credentials TLS. Côté CLI : credentials TLS, **endpoint configurable** (`TODO_SERVER_ENDPOINT` / `--endpoint`, remplace le `127.0.0.1:50051` codé en dur), et ajout de **timeouts/retries** (réseau distant).
-- **Fichiers / couches touchés** : `cmd/server/main.go` (`credentials.NewTLS`), `cmd/todo/main.go` (creds TLS, endpoint configurable, `context.WithTimeout`, politique de retry).
-- **Dépendances** : Phase 3 (les tokens transitent désormais sur un canal qui doit être chiffré).
-- **Validation / tests** : connexion **insecure refusée** par le serveur TLS ; handshake TLS réussi avec un certificat auto-signé en local ; un appel dépassant le timeout échoue proprement (pas de blocage).
-- **Risques & dérisquage** : erreurs de configuration TLS → **tester avec un certificat auto-signé en local** avant tout déploiement distant (phase 6). Sur Fly.io, le TLS peut être terminé par le PaaS (cf. ADR §6.2).
-- **Effort** : **M**.
+- **Goal**: encrypt the gRPC transport (end of `insecure.NewCredentials()`). Server side: TLS credentials. CLI side: TLS credentials, **configurable endpoint** (`TODO_SERVER_ENDPOINT` / `--endpoint`, replaces the hard-coded `127.0.0.1:50051`), and adding **timeouts/retries** (remote network).
+- **Files / layers touched**: `cmd/server/main.go` (`credentials.NewTLS`), `cmd/todo/main.go` (TLS creds, configurable endpoint, `context.WithTimeout`, retry policy).
+- **Dependencies**: Phase 3 (tokens now travel over a channel that must be encrypted).
+- **Validation / tests**: **insecure connection refused** by the TLS server; successful TLS handshake with a local self-signed certificate; a call exceeding the timeout fails cleanly (no hang).
+- **Risks & de-risking**: TLS misconfiguration → **test with a local self-signed certificate** before any remote deployment (phase 6). On Fly.io, TLS may be terminated by the PaaS (cf. ADR §6.2).
+- **Effort**: **M**.
 
-### Phase 5 — Migration `data.json` → Postgres + rétrocompatibilité
+### Phase 5 — Migration `data.json` → Postgres + backward compatibility
 
-- **Objectif** : permettre à un utilisateur existant de transférer son `~/.config/todolist/data.json` vers Postgres pour son compte connecté, sans perte. Commande one-shot `todo migrate` : lit le JSON local, **upsert** dans Postgres pour le `user_id` courant, **idempotente** (rejouable sans doublon grâce à `UNIQUE(user_id, title)`). Le `data.json` est **conservé** (renommé `.bak`), jamais supprimé.
-- **Fichiers / couches touchés** : `cmd/todo/` (sous-commande `migrate`), `libs/storage` (lecture JSON existante réutilisée + écriture via `PgStore`).
-- **Dépendances** : Phases 1 (PgStore), 2 (scoping `user_id`), 3 (le user doit être authentifié pour avoir un `user_id`).
-- **Validation / tests** : migration d'un `data.json` d'exemple → listes/items présents en base sous le bon `user_id` ; **ré-exécution idempotente** (pas de doublon, pas d'erreur) ; le fichier d'origine est préservé en `.bak`.
-- **Risques & dérisquage** : perte de données → ne jamais supprimer `data.json`, migration idempotente, dry-run possible. Rétrocompat assurée par le **feature flag** : tant que `TODO_STORAGE=json`, rien ne change pour l'utilisateur ; bascule sur `postgres` après migration validée.
-- **Effort** : **M**.
+- **Goal**: let an existing user transfer their `~/.config/todolist/data.json` to Postgres for their logged-in account, without loss. One-shot `todo migrate` command: reads the local JSON, **upserts** into Postgres for the current `user_id`, **idempotent** (replayable without duplicates thanks to `UNIQUE(user_id, title)`). The `data.json` is **kept** (renamed `.bak`), never deleted.
+- **Files / layers touched**: `cmd/todo/` (`migrate` subcommand), `libs/storage` (reuse existing JSON reading + write via `PgStore`).
+- **Dependencies**: Phases 1 (PgStore), 2 (`user_id` scoping), 3 (the user must be authenticated to have a `user_id`).
+- **Validation / tests**: migrating a sample `data.json` → lists/items present in the database under the correct `user_id`; **idempotent re-run** (no duplicate, no error); the original file is preserved as `.bak`.
+- **Risks & de-risking**: data loss → never delete `data.json`, idempotent migration, dry-run possible. Backward compat ensured by the **feature flag**: as long as `TODO_STORAGE=json`, nothing changes for the user; switch to `postgres` after the migration is validated.
+- **Effort**: **M**.
 
-### Phase 6 — Hébergement Fly.io + secrets + CI
+### Phase 6 — Fly.io hosting + secrets + CI
 
-- **Objectif** : déployer le serveur gRPC sur un PaaS free tier (Fly.io), accessible publiquement en TLS, et **remplacer le launchd local**. Mettre en place les secrets et une CI.
-- **Fichiers / couches touchés** : `Dockerfile` (serveur), `fly.toml`, secrets via `fly secrets` (`DATABASE_URL`, `SUPABASE_JWT_SECRET`/`SUPABASE_JWKS_URL`, `TLS_*`, `PORT` — cf. ADR §6.2), documentation (`docs/daemon-setup.md` → guide de déploiement distant ; le CLI ne lance plus de serveur), `.github/workflows/` (CI **nouvelle** : build + `go test` + `golangci-lint`, absente aujourd'hui).
-- **Dépendances** : Phases 1–5 (le serveur doit être complet et sécurisé avant d'être exposé publiquement).
-- **Validation / tests** : déploiement sur un environnement de staging Fly.io ; **smoke test** du CLI distant (`login` puis `create`/`list` contre l'endpoint déployé) ; la CI passe sur une PR.
-- **Risques & dérisquage** : secret committé par erreur → secrets exclusivement via le secret manager Fly.io, `.gitignore` vérifié, scan de secrets en CI. Mise en veille du free tier → documenter le comportement (cold start). Déployer en **staging** avant prod.
-- **Effort** : **M/L**.
+- **Goal**: deploy the gRPC server on a free-tier PaaS (Fly.io), publicly accessible over TLS, and **replace the local launchd**. Set up secrets and a CI.
+- **Files / layers touched**: `Dockerfile` (server), `fly.toml`, secrets via `fly secrets` (`DATABASE_URL`, `SUPABASE_JWT_SECRET`/`SUPABASE_JWKS_URL`, `TLS_*`, `PORT` — cf. ADR §6.2), documentation (`docs/daemon-setup.md` → remote deployment guide; the CLI no longer launches a server), `.github/workflows/` (**new** CI: build + `go test` + `golangci-lint`, absent today).
+- **Dependencies**: Phases 1–5 (the server must be complete and secure before being publicly exposed).
+- **Validation / tests**: deployment to a Fly.io staging environment; **smoke test** of the remote CLI (`login` then `create`/`list` against the deployed endpoint); CI passes on a PR.
+- **Risks & de-risking**: secret committed by mistake → secrets exclusively via the Fly.io secret manager, `.gitignore` checked, secret scan in CI. Free-tier sleep → document the behavior (cold start). Deploy to **staging** before prod.
+- **Effort**: **M/L**.
 
-### Phase 7 — gRPC-Gateway + front web (HORS v1)
+### Phase 7 — gRPC-Gateway + web frontend (OUT OF v1)
 
-- **Objectif** : exposer le même service gRPC en REST/JSON via **gRPC-Gateway** (annotations `google.api.http` sur les RPC), pour un futur front web (cf. ADR §3 et analyse §6).
-- **Fichiers / couches touchés** : `proto/todoList.proto` (annotations HTTP), génération Gateway (`Makefile`/`buf`), déploiement (exposer la Gateway).
-- **Dépendances** : Phase 6.
-- **Statut** : **explicitement hors première version** — à planifier après la v1 CLI distante stabilisée.
-- **Effort** : **L**.
+- **Goal**: expose the same gRPC service as REST/JSON via **gRPC-Gateway** (`google.api.http` annotations on the RPCs), for a future web frontend (cf. ADR §3 and analysis §6).
+- **Files / layers touched**: `proto/todoList.proto` (HTTP annotations), Gateway generation (`Makefile`/`buf`), deployment (expose the Gateway).
+- **Dependencies**: Phase 6.
+- **Status**: **explicitly out of the first version** — to be planned after the v1 remote CLI is stabilized.
+- **Effort**: **L**.
 
-## 4. Gestion de la migration et rétrocompatibilité
+## 4. Migration and backward-compatibility management
 
-- **Feature flag `TODO_STORAGE`** (`json` | `postgres`) actif **pendant toute la transition** : par défaut `json` jusqu'à validation complète du chemin distant, puis bascule vers `postgres`. Permet un rollback instantané.
-- **`data.json` jamais détruit** : la migration (phase 5) le renomme en `.bak` au plus ; aucune suppression automatique.
-- **Outil `todo migrate` idempotent** : rejouable sans créer de doublons (garanti par `UNIQUE(user_id, title)`), donc sûr en cas d'interruption.
-- **Rollback** : repasser `TODO_STORAGE=json` restaure immédiatement le comportement local d'origine (les données locales sont toujours là).
-- **Pas de fenêtre de casse** : entre deux phases, le projet compile, les tests passent et le CLI fonctionne (sur JSON par défaut).
+- **Feature flag `TODO_STORAGE`** (`json` | `postgres`) active **throughout the transition**: defaults to `json` until the remote path is fully validated, then switches to `postgres`. Allows instant rollback.
+- **`data.json` never destroyed**: the migration (phase 5) renames it to `.bak` at most; no automatic deletion.
+- **Idempotent `todo migrate` tool**: replayable without creating duplicates (guaranteed by `UNIQUE(user_id, title)`), so safe in case of interruption.
+- **Rollback**: setting `TODO_STORAGE=json` back immediately restores the original local behavior (the local data is still there).
+- **No breakage window**: between two phases, the project compiles, the tests pass and the CLI works (on JSON by default).
 
-## 5. Nouvelles dépendances Go, config, secrets et CI
+## 5. New Go dependencies, config, secrets and CI
 
-### Dépendances Go à ajouter
+### Go dependencies to add
 
-| Dépendance | Rôle | Phase |
+| Dependency | Role | Phase |
 | --- | --- | --- |
-| `github.com/jackc/pgx` (v5) | Driver / pool Postgres, requêtes paramétrées | 1 |
-| `golang-migrate` **ou** `sqlc` (à trancher) | Migrations SQL / génération de code typé depuis le SQL | 1 |
-| `github.com/golang-jwt/jwt` (v5) | Validation/parsing des JWT côté serveur | 3 |
-| `supabase-go` (éventuel) | Dialogue CLI ↔ Supabase Auth si on ne tape pas l'API HTTP directement | 3 |
+| `github.com/jackc/pgx` (v5) | Postgres driver / pool, parameterized queries | 1 |
+| `golang-migrate` **or** `sqlc` (to decide) | SQL migrations / typed code generation from SQL | 1 |
+| `github.com/golang-jwt/jwt` (v5) | JWT validation/parsing on the server side | 3 |
+| `supabase-go` (possible) | CLI ↔ Supabase Auth dialogue if we don't hit the HTTP API directly | 3 |
 
-> **Décision à prendre en début de phase 1** : `golang-migrate` (migrations versionnées, SQL brut) vs `sqlc` (génère du Go typé depuis les requêtes SQL). Recommandation : trancher avant d'écrire `PgStore` pour ne pas mélanger les approches.
+> **Decision to make at the start of phase 1**: `golang-migrate` (versioned migrations, raw SQL) vs `sqlc` (generates typed Go from SQL queries). Recommendation: decide before writing `PgStore` so as not to mix approaches.
 
 ### Config / secrets (cf. ADR §6.2)
 
-- **Serveur** : `DATABASE_URL`, `SUPABASE_JWT_SECRET` / `SUPABASE_JWKS_URL`, `JWT_SIGNING_KEY` (mode maison), `TLS_CERT_PATH` / `TLS_KEY_PATH`, `PORT` — via secret manager Fly.io, **jamais** dans le repo.
-- **CLI** : `TODO_SERVER_ENDPOINT` (ou `--endpoint`), `TODO_STORAGE` (transition), `~/.config/todolist/credentials.json` (0600).
+- **Server**: `DATABASE_URL`, `SUPABASE_JWT_SECRET` / `SUPABASE_JWKS_URL`, `JWT_SIGNING_KEY` (home-grown mode), `TLS_CERT_PATH` / `TLS_KEY_PATH`, `PORT` — via the Fly.io secret manager, **never** in the repo.
+- **CLI**: `TODO_SERVER_ENDPOINT` (or `--endpoint`), `TODO_STORAGE` (transition), `~/.config/todolist/credentials.json` (0600).
 
-### CI (nouvelle)
+### CI (new)
 
-- Pas de `.github/workflows` aujourd'hui. Ajouter (phase 6) un pipeline GitHub Actions : `go build`, `go test ./...`, `golangci-lint` (la cible `lint` du `Makefile` existe déjà), et idéalement un job d'intégration Postgres (service container).
+- No `.github/workflows` today. Add (phase 6) a GitHub Actions pipeline: `go build`, `go test ./...`, `golangci-lint` (the `lint` target in the `Makefile` already exists), and ideally a Postgres integration job (service container).
 
-## 6. Risques transverses et stratégie de dérisquage
+## 6. Cross-cutting risks and de-risking strategy
 
-| Risque | Phase(s) | Dérisquage |
+| Risk | Phase(s) | De-risking |
 | --- | --- | --- |
-| Divergence comportement JSON ↔ Postgres | 1 | Tests de parité `JSONStore` vs `PgStore` |
-| Fuite de données (filtre `user_id` oublié) | 2 | Test d'isolation par RPC + revue ciblée |
-| Intégration auth complexe / fragile | 3 | JWT signé localement d'abord, **puis** Supabase ; refresh testé hors-ligne |
-| Mauvaise config TLS | 4, 6 | Certificat auto-signé en local avant Fly.io |
-| Perte de données à la migration | 5 | `data.json` conservé en `.bak`, migration idempotente, feature flag |
-| Secret committé / exposé | 6 | Secret manager PaaS, scan de secrets en CI, `.gitignore` |
-| Casse entre deux phases | toutes | Feature flag `TODO_STORAGE`, chaque phase testable, tests verts en continu |
+| JSON ↔ Postgres behavior divergence | 1 | `JSONStore` vs `PgStore` parity tests |
+| Data leak (forgotten `user_id` filter) | 2 | Per-RPC isolation test + targeted review |
+| Complex / fragile auth integration | 3 | Locally-signed JWT first, **then** Supabase; refresh tested offline |
+| Bad TLS config | 4, 6 | Self-signed certificate locally before Fly.io |
+| Data loss during migration | 5 | `data.json` kept as `.bak`, idempotent migration, feature flag |
+| Secret committed / exposed | 6 | PaaS secret manager, secret scan in CI, `.gitignore` |
+| Breakage between two phases | all | `TODO_STORAGE` feature flag, every phase testable, tests green continuously |
 
-## 7. Hors scope de la première version
+## 7. Out of scope for the first version
 
-- **Front web** et **gRPC-Gateway** (phase 7) — viennent après la v1 CLI distante.
-- **Temps réel / notifications** (sync push entre devices) — la cohérence v1 repose sur la base, pas sur du push.
-- **Partage de listes entre utilisateurs** — le modèle v1 isole strictement par `user_id`.
-- **Fournisseurs OAuth supplémentaires** (GitHub/Google) si Supabase Auth couvre déjà email/mot de passe pour la v1.
-- **Observabilité avancée** (tracing distribué, dashboards) — au-delà des logs serveur de base.
+- **Web frontend** and **gRPC-Gateway** (phase 7) — come after the v1 remote CLI.
+- **Real-time / notifications** (push sync between devices) — v1 consistency relies on the database, not on push.
+- **List sharing between users** — the v1 model strictly isolates by `user_id`.
+- **Additional OAuth providers** (GitHub/Google) if Supabase Auth already covers email/password for v1.
+- **Advanced observability** (distributed tracing, dashboards) — beyond basic server logs.
 
 ---
 
-*Document de planification uniquement — aucune implémentation de production. Extraits (signatures, SQL, proto) fournis à titre illustratif. Cohérent avec `docs/remote-storage-analysis.md` et `docs/target-architecture.md`.*
+*Planning document only — no production implementation. Excerpts (signatures, SQL, proto) provided for illustration. Consistent with `docs/remote-storage-analysis.md` and `docs/target-architecture.md`.*

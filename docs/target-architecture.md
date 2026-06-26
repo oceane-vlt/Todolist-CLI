@@ -1,60 +1,60 @@
-# Architecture cible — TodoList-CLI en stockage distant
+# Target architecture — TodoList-CLI with remote storage
 
-> **Document de décision d'architecture (ADR).** Pas d'implémentation de production : ce document arrête les choix techniques et décrit la cible. Les exemples de DDL SQL et de signatures sont **illustratifs**.
+> **Architecture Decision Record (ADR).** Not a production implementation: this document settles the technical choices and describes the target. The SQL DDL examples and signatures are **illustrative**.
 >
-> - **Statut** : Décidé (s'appuie sur [`docs/remote-storage-analysis.md`](./remote-storage-analysis.md), recommandation §7).
-> - **Date** : 2026-06-20.
-> - **Étape suivante** (hors périmètre) : plan d'implémentation détaillé puis code.
+> - **Status**: Decided (builds on [`docs/remote-storage-analysis.md`](./remote-storage-analysis.md), recommendation §7).
+> - **Date**: 2026-06-20.
+> - **Next step** (out of scope): detailed implementation plan, then code.
 
-## 1. Choix de solutions arrêtés
+## 1. Settled solution choices
 
-Reprise directe de la recommandation de l'analyse (cf. `remote-storage-analysis.md` §7), avec justification courte.
+Directly carried over from the analysis recommendation (see `remote-storage-analysis.md` §7), with a short justification.
 
-| Domaine | Choix arrêté | Justification (renvoi analyse) |
+| Domain | Settled choice | Justification (analysis reference) |
 | --- | --- | --- |
-| **Backend de stockage** | **PostgreSQL managé sur free tier — Neon** (Supabase = repli) | Analyse §3 Option A & §4 : multi-device/multi-user natif via transactions + contraintes SQL, gratuit/pérenne, modèle relationnel aligné sur le "SQLite planned" du README. |
-| **Auth** | **JWT** validés côté serveur, émis par **Supabase Auth** (repli : JWT maison + OAuth GitHub/Google) | Analyse §5 & §7 : standard, sans état serveur, portable vers le web ; Supabase Auth réduit le code d'auth. |
-| **Transport / TLS** | **gRPC sur TLS** (fin de `insecure.NewCredentials()`) | Analyse §2 écart #2 & §8 : obligatoire dès qu'on quitte localhost, sinon tokens en clair. |
-| **Hébergement serveur** | **PaaS free tier — Fly.io** (replis : Railway, Render) | Analyse §3 Option A : héberge le serveur gRPC ; évite la charge ops/sécurité d'un VPS (Option E rejetée). |
-| **Futur front web** | **gRPC-Gateway** (REST/JSON généré depuis le `.proto`) ; gRPC-Web en complément possible | Analyse §6 & §7 : un seul backend gRPC, deux clients (CLI + web), logique métier/sécurité centralisée. |
-| **Isolation des données** | **Par `user_id`**, appliquée dans chaque RPC et chaque requête SQL | Analyse §2 écart #3 & §8 : ne jamais faire confiance au client pour le périmètre des données. |
+| **Storage backend** | **Managed PostgreSQL on a free tier — Neon** (Supabase = fallback) | Analysis §3 Option A & §4: native multi-device/multi-user via SQL transactions + constraints, free/durable, relational model aligned with the README's "SQLite planned". |
+| **Auth** | **JWTs** validated server-side, issued by **Supabase Auth** (fallback: homegrown JWT + GitHub/Google OAuth) | Analysis §5 & §7: standard, stateless on the server, portable to the web; Supabase Auth reduces auth code. |
+| **Transport / TLS** | **gRPC over TLS** (end of `insecure.NewCredentials()`) | Analysis §2 gap #2 & §8: mandatory as soon as we leave localhost, otherwise tokens travel in clear text. |
+| **Server hosting** | **PaaS free tier — Fly.io** (fallbacks: Railway, Render) | Analysis §3 Option A: hosts the gRPC server; avoids the ops/security burden of a VPS (Option E rejected). |
+| **Future web frontend** | **gRPC-Gateway** (REST/JSON generated from the `.proto`); gRPC-Web as a possible complement | Analysis §6 & §7: a single gRPC backend, two clients (CLI + web), business logic/security centralized. |
+| **Data isolation** | **By `user_id`**, enforced in every RPC and every SQL query | Analysis §2 gap #3 & §8: never trust the client for the data scope. |
 
-**Principe directeur** : le serveur gRPC reste l'**unique gardien des données** (seul à parler à la base). On change la couche persistance, pas la couture gRPC. C'est ce qui distingue l'option retenue (A) de Firestore (B, rejetée car court-circuite le backend).
+**Guiding principle**: the gRPC server remains the **sole guardian of the data** (the only one that talks to the database). We change the persistence layer, not the gRPC seam. This is what distinguishes the chosen option (A) from Firestore (B, rejected because it bypasses the backend).
 
-## 2. Schéma de données cible
+## 2. Target data schema
 
-### 2.1 Du modèle JSON actuel au modèle relationnel
+### 2.1 From the current JSON model to the relational model
 
-Modèle actuel (`libs/storage/common.go`) : un fichier JSON unique, mono-utilisateur, listes indexées par titre.
+Current model (`libs/storage/common.go`): a single JSON file, single-user, lists indexed by title.
 
 ```go
-// Actuel — un seul fichier, pas de notion d'utilisateur
+// Current — a single file, no notion of user
 type TodoData struct {
-    Lists map[string][]TodoItem // clé = title
+    Lists map[string][]TodoItem // key = title
 }
 ```
 
-| Aspect | Modèle JSON actuel | Modèle SQL cible |
+| Aspect | Current JSON model | Target SQL model |
 | --- | --- | --- |
-| Portée | Mono-utilisateur (fichier local) | Multi-utilisateur (`user_id` partout) |
-| Clé d'une liste | `title` (global) | `(user_id, title)` unique |
-| Items | tableau dans `map[title]` | table `items` (FK vers `lists`), ordre explicite |
-| Concurrence | réécriture complète du fichier, pas de lock | transactions + contraintes ACID |
-| Suppression cascade | manuelle (réécriture map) | `ON DELETE CASCADE` |
-| `priority` | chaîne libre | enum / `CHECK` contraint |
+| Scope | Single-user (local file) | Multi-user (`user_id` everywhere) |
+| Key of a list | `title` (global) | `(user_id, title)` unique |
+| Items | array in `map[title]` | `items` table (FK to `lists`), explicit ordering |
+| Concurrency | full file rewrite, no lock | transactions + ACID constraints |
+| Cascade delete | manual (map rewrite) | `ON DELETE CASCADE` |
+| `priority` | free-form string | enum / `CHECK` constraint |
 
-### 2.2 Tables, clés et contraintes
+### 2.2 Tables, keys and constraints
 
-Trois tables : `users` (peut être déléguée à Supabase Auth), `lists`, `items`.
+Three tables: `users` (can be delegated to Supabase Auth), `lists`, `items`.
 
-- **`users`** — identité. PK `id`. Si Supabase Auth est utilisé, cette table = `auth.users` géré par Supabase ; on référence simplement son `id` (UUID).
-- **`lists`** — une todolist appartenant à un utilisateur. **Contrainte clé** : `UNIQUE(user_id, title)` (remplace l'indexation par titre seul). FK `user_id → users(id) ON DELETE CASCADE`.
-- **`items`** — les éléments d'une liste. FK `list_id → lists(id) ON DELETE CASCADE`. `position` pour préserver l'ordre (le JSON s'appuyait sur l'ordre du tableau et sur `item_index`).
+- **`users`** — identity. PK `id`. If Supabase Auth is used, this table = `auth.users` managed by Supabase; we simply reference its `id` (UUID).
+- **`lists`** — a todolist owned by a user. **Key constraint**: `UNIQUE(user_id, title)` (replaces indexing by title alone). FK `user_id → users(id) ON DELETE CASCADE`.
+- **`items`** — the elements of a list. FK `list_id → lists(id) ON DELETE CASCADE`. `position` to preserve order (the JSON relied on the array order and on `item_index`).
 
-DDL **illustratif** (cible Postgres) :
+**Illustrative** DDL (Postgres target):
 
 ```sql
--- users : géré par Supabase Auth (auth.users) si Supabase ; sinon table maison.
+-- users: managed by Supabase Auth (auth.users) if Supabase; otherwise a homegrown table.
 CREATE TABLE users (
     id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email       TEXT UNIQUE NOT NULL,
@@ -67,13 +67,13 @@ CREATE TABLE lists (
     title       TEXT NOT NULL,
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
-    UNIQUE (user_id, title)            -- isolation + unicité par utilisateur
+    UNIQUE (user_id, title)            -- isolation + uniqueness per user
 );
 
 CREATE TABLE items (
     id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     list_id     UUID NOT NULL REFERENCES lists(id) ON DELETE CASCADE,
-    position    INT  NOT NULL,         -- ordre stable (remplace item_index)
+    position    INT  NOT NULL,         -- stable ordering (replaces item_index)
     title       TEXT NOT NULL,
     description TEXT NOT NULL DEFAULT '',
     completed   BOOLEAN NOT NULL DEFAULT false,
@@ -87,14 +87,14 @@ CREATE INDEX idx_lists_user  ON lists(user_id);
 CREATE INDEX idx_items_list  ON items(list_id);
 ```
 
-> Mapping des champs : `Item{title, description, completed, dueDate, priority}` du `.proto` → colonnes `items`. `dueDate` (string libre côté proto) → `DATE` (ou `TEXT` si on veut préserver le format brut au début). `priority` (string libre) → contrainte `CHECK`.
+> Field mapping: `Item{title, description, completed, dueDate, priority}` from the `.proto` → `items` columns. `dueDate` (free-form string on the proto side) → `DATE` (or `TEXT` if we want to preserve the raw format at first). `priority` (free-form string) → `CHECK` constraint.
 
-## 3. Architecture cible end-to-end
+## 3. End-to-end target architecture
 
-Le CLI ne parle jamais à la base ; il passe toujours par le serveur gRPC distant, sur TLS, avec un JWT en metadata. Le futur front web emprunte le **même** serveur via gRPC-Gateway (REST/JSON) ou gRPC-Web.
+The CLI never talks to the database; it always goes through the remote gRPC server, over TLS, with a JWT in the metadata. The future web frontend uses the **same** server via gRPC-Gateway (REST/JSON) or gRPC-Web.
 
 ```
-                         AUJOURD'HUI (local, mono-user)
+                         TODAY (local, single-user)
    ┌──────────────┐   gRPC insecure    ┌───────────────┐   os.WriteFile   ┌──────────────────┐
    │  cmd/todo    │ ─────────────────▶ │  cmd/server   │ ───────────────▶ │ ~/.config/.../   │
    │  (CLI)       │   127.0.0.1:50051  │  (gRPC local) │   (JSON 0644)    │   data.json      │
@@ -102,11 +102,11 @@ Le CLI ne parle jamais à la base ; il passe toujours par le serveur gRPC distan
                                    (launchd daemon macOS)
 
 
-                          CIBLE (distant, multi-user, multi-device)
+                          TARGET (remote, multi-user, multi-device)
 
    ┌──────────────┐                                          ┌───────────────────────────┐
    │  cmd/todo    │                                          │  Supabase Auth (IdP)      │
-   │  (CLI)       │ ── signup/login (HTTPS) ───────────────▶ │  émet access + refresh JWT │
+   │  (CLI)       │ ── signup/login (HTTPS) ───────────────▶ │  issues access + refresh JWT │
    │              │ ◀── access JWT + refresh JWT ──────────  └───────────────────────────┘
    │  token store │
    │  0600        │
@@ -115,43 +115,43 @@ Le CLI ne parle jamais à la base ; il passe toujours par le serveur gRPC distan
           │  metadata: authorization: Bearer <access JWT>
           ▼
    ┌─────────────────────────────────────────┐         ┌──────────────────────────────┐
-   │      cmd/server  (gRPC, hébergé PaaS)     │  pgx /  │   PostgreSQL managé (Neon)   │
-   │  ┌─────────────────────────────────────┐ │  SQL    │   tables users/lists/items   │
-   │  │ intercepteur TLS + auth :           │ │ ──────▶ │   isolation par user_id      │
-   │  │  valide JWT → user_id dans context  │ │ ◀────── │   transactions / contraintes │
+   │      cmd/server  (gRPC, hosted on PaaS)   │  pgx /  │   Managed PostgreSQL (Neon)  │
+   │  ┌─────────────────────────────────────┐ │  SQL    │   users/lists/items tables   │
+   │  │ TLS + auth interceptor:             │ │ ──────▶ │   isolation by user_id       │
+   │  │  validates JWT → user_id in context │ │ ◀────── │   transactions / constraints │
    │  └─────────────────────────────────────┘ │         └──────────────────────────────┘
-   │  RPC métier : scoping par user_id         │
+   │  business RPCs: scoping by user_id        │
    └──────────────▲────────────────────────────┘
-                  │ (futur)
+                  │ (future)
    ┌──────────────┴───────────────┐
-   │  gRPC-Gateway (REST/JSON)     │ ◀── Front web futur (HTTPS / gRPC-Web)
-   │  généré depuis le .proto      │
+   │  gRPC-Gateway (REST/JSON)     │ ◀── Future web frontend (HTTPS / gRPC-Web)
+   │  generated from the .proto    │
    └──────────────────────────────┘
 ```
 
-Flux d'un appel métier (ex. `GetTodoLists`) :
+Flow of a business call (e.g. `GetTodoLists`):
 
-1. Le CLI lit l'access JWT dans son store local et l'attache en metadata gRPC (`authorization: Bearer …`).
-2. Connexion **TLS** au serveur gRPC distant.
-3. L'**intercepteur** serveur valide le JWT (signature + expiration), extrait le `user_id`, l'injecte dans le `context.Context`.
-4. Le handler RPC lit le `user_id` depuis le context et exécute une requête SQL **paramétrée** filtrée `WHERE user_id = $1`.
-5. Réponse renvoyée au CLI (ou au front web via la Gateway).
+1. The CLI reads the access JWT from its local store and attaches it to the gRPC metadata (`authorization: Bearer …`).
+2. **TLS** connection to the remote gRPC server.
+3. The server-side **interceptor** validates the JWT (signature + expiry), extracts the `user_id`, and injects it into the `context.Context`.
+4. The RPC handler reads the `user_id` from the context and runs a **parameterized** SQL query filtered by `WHERE user_id = $1`.
+5. The response is returned to the CLI (or to the web frontend via the Gateway).
 
-## 4. Impact sur le contrat `proto` et sur le code
+## 4. Impact on the `proto` contract and on the code
 
-### 4.1 Où passe l'identité : metadata, PAS champ message
+### 4.1 Where identity flows: metadata, NOT a message field
 
-- **Décision** : l'identité de l'utilisateur transite par les **metadata gRPC** (`authorization: Bearer <JWT>`), **jamais** par un champ `user_id` dans les messages — sinon un client malveillant pourrait usurper un autre utilisateur (analyse §5 et §6).
-- Le `user_id` est dérivé du JWT **côté serveur** par l'intercepteur, puis lu depuis le `context`. Le client ne le fournit ni ne le voit.
+- **Decision**: the user's identity travels through the **gRPC metadata** (`authorization: Bearer <JWT>`), **never** through a `user_id` field in the messages — otherwise a malicious client could impersonate another user (analysis §5 and §6).
+- The `user_id` is derived from the JWT **on the server side** by the interceptor, then read from the `context`. The client neither provides it nor sees it.
 
-### 4.2 Contrat `proto` — ce qui change et ce qui ne change pas
+### 4.2 `proto` contract — what changes and what does not
 
-- Les **7 RPC métier existants restent inchangés** dans leur signature (`CreateTodoList`, `GetTodoLists`, `ShowTodoListItems`, `DeleteTodoList`, `DeleteTodoListItems`, `UpdateTodoList`, `UpdateTodoListItem`). Ils continuent à indexer par `title` côté client ; le serveur applique la clé logique **`(user_id, title)`**.
-- **Aucun champ `user_id` ajouté** aux messages (cf. 4.1).
-- **Option (futur)** : un `AuthService` distinct si on n'utilise PAS l'auth managée :
+- The **7 existing business RPCs keep unchanged signatures** (`CreateTodoList`, `GetTodoLists`, `ShowTodoListItems`, `DeleteTodoList`, `DeleteTodoListItems`, `UpdateTodoList`, `UpdateTodoListItem`). They continue to index by `title` on the client side; the server enforces the logical key **`(user_id, title)`**.
+- **No `user_id` field added** to the messages (see 4.1).
+- **Option (future)**: a separate `AuthService` if we do NOT use managed auth:
 
   ```proto
-  // Illustratif — uniquement si auth maison (sinon Supabase Auth s'en charge)
+  // Illustrative — only if homegrown auth (otherwise Supabase Auth handles it)
   service AuthService {
       rpc Signup  (SignupRequest)  returns (TokenResponse);
       rpc Login   (LoginRequest)   returns (TokenResponse);
@@ -164,146 +164,144 @@ Flux d'un appel métier (ex. `GetTodoLists`) :
   }
   ```
 
-  Avec **Supabase Auth**, ce service n'est pas nécessaire : le CLI dialogue directement avec l'endpoint d'auth Supabase (HTTPS) et le serveur gRPC se contente de **valider** les JWT émis par Supabase.
+  With **Supabase Auth**, this service is not needed: the CLI talks directly to the Supabase auth endpoint (HTTPS), and the gRPC server merely **validates** the JWTs issued by Supabase.
 
-- **Futur web** : annotations `google.api.http` sur les RPC pour générer la REST via **gRPC-Gateway**.
+- **Future web**: `google.api.http` annotations on the RPCs to generate the REST layer via **gRPC-Gateway**.
 
-### 4.3 Couches de code impactées
+### 4.3 Affected code layers
 
-| Couche | Aujourd'hui | Cible |
+| Layer | Today | Target |
 | --- | --- | --- |
-| `libs/storage` | JSON `os.WriteFile` (réécriture complète) | **Accès Postgres via `pgx`** : requêtes paramétrées scoping `user_id`, transactions. Signatures prennent un `user_id` (issu du context). C'est le **gros du changement**. |
-| `cmd/server` | gRPC local, pas d'intercepteur, pas de TLS | Ajout **TLS** (creds), **intercepteur auth** (JWT → `user_id` dans context), lecture config via env, **scoping `user_id`** dans chaque handler. |
-| `cmd/todo` (CLI) | dial `insecure` 127.0.0.1, pas de token, pas de timeout | **TLS creds**, endpoint **configurable** (env/flag/config), **attache le JWT** en metadata, **timeouts/retries** (réseau distant), nouvelles sous-commandes **`login` / `signup` / `logout`**, **stockage/refresh du token**. |
-| `proto` | 7 RPC, aucune notion d'utilisateur | **7 RPC inchangés** ; (optionnel) `AuthService` ; (futur) annotations HTTP pour la Gateway. |
+| `libs/storage` | JSON `os.WriteFile` (full rewrite) | **Postgres access via `pgx`**: parameterized queries scoping by `user_id`, transactions. Signatures take a `user_id` (from the context). This is the **bulk of the change**. |
+| `cmd/server` | local gRPC, no interceptor, no TLS | Add **TLS** (creds), an **auth interceptor** (JWT → `user_id` in context), config read from env, **`user_id` scoping** in each handler. |
+| `cmd/todo` (CLI) | `insecure` dial to 127.0.0.1, no token, no timeout | **TLS creds**, **configurable** endpoint (env/flag/config), **attaches the JWT** in metadata, **timeouts/retries** (remote network), new subcommands **`login` / `signup` / `logout`**, **token storage/refresh**. |
+| `proto` | 7 RPCs, no notion of user | **7 RPCs unchanged**; (optional) `AuthService`; (future) HTTP annotations for the Gateway. |
 
-Signature illustrative de la couche storage (cible) :
+Illustrative signature of the storage layer (target):
 
 ```go
-// Illustratif — user_id vient du context (injecté par l'intercepteur), pas d'un argument client
+// Illustrative — user_id comes from the context (injected by the interceptor), not from a client argument
 func (s *Store) GetLists(ctx context.Context, userID string) ([]ListSummary, error)
 func (s *Store) CreateList(ctx context.Context, userID, title string, items []Item) error
 ```
 
-## 5. Flux d'authentification et multi-device
+## 5. Authentication flow and multi-device
 
 ### 5.1 Signup / Login
 
 ```
-1. todo signup --email <e> (mot de passe saisi via prompt)   ┐
+1. todo signup --email <e> (password entered via prompt)     ┐
    todo login  --email <e>                                    │ HTTPS → Supabase Auth
-2. Supabase Auth vérifie et renvoie { access_token (court),   ┘
+2. Supabase Auth verifies and returns { access_token (short), ┘
    refresh_token (long) }
-3. Le CLI écrit les tokens dans ~/.config/todolist/credentials.json  (perms 0600)
-4. Les appels gRPC métier attachent: authorization: Bearer <access_token>
+3. The CLI writes the tokens to ~/.config/todolist/credentials.json  (perms 0600)
+4. Business gRPC calls attach: authorization: Bearer <access_token>
 ```
 
-### 5.2 Stockage du token côté client
+### 5.2 Client-side token storage
 
-- Fichier **`~/.config/todolist/credentials.json`**, permissions **`0600`** (lecture/écriture propriétaire uniquement). C'est le même répertoire que l'actuel `data.json`, mais ce dernier disparaît (données désormais en base).
-- Contenu : `access_token`, `refresh_token`, `expires_at`, `endpoint` (serveur). **Aucun secret dans le repo.**
+- File **`~/.config/todolist/credentials.json`**, permissions **`0600`** (owner read/write only). This is the same directory as the current `data.json`, but the latter goes away (data now lives in the database).
+- Contents: `access_token`, `refresh_token`, `expires_at`, `endpoint` (server). **No secret in the repo.**
 
 ### 5.3 Refresh
 
-- Quand l'access JWT est expiré (réponse `Unauthenticated` ou `expires_at` dépassé), le CLI utilise le **refresh_token** pour obtenir un nouvel access JWT (auprès de Supabase Auth, ou via `AuthService.Refresh` en mode maison), puis rejoue l'appel. Transparent pour l'utilisateur.
-- `logout` supprime `credentials.json` (et révoque le refresh côté provider si supporté).
+- When the access JWT is expired (an `Unauthenticated` response or a past `expires_at`), the CLI uses the **refresh_token** to obtain a new access JWT (from Supabase Auth, or via `AuthService.Refresh` in homegrown mode), then replays the call. Transparent to the user.
+- `logout` deletes `credentials.json` (and revokes the refresh token on the provider side if supported).
 
 ### 5.4 Multi-device
 
 ```
 PC A ──login──▶ Supabase Auth ──▶ credentials.json (PC A)  ┐
-PC B ──login──▶ Supabase Auth ──▶ credentials.json (PC B)  ┘  même compte (même user_id)
+PC B ──login──▶ Supabase Auth ──▶ credentials.json (PC B)  ┘  same account (same user_id)
         │                                  │
         └────── gRPC over TLS ─────────────┘
                         ▼
-              serveur gRPC distant
+              remote gRPC server
                         ▼
           Postgres (lists/items WHERE user_id = …)
 ```
 
-- Même compte connecté sur plusieurs machines ; **chaque device a ses propres tokens** mais le **même `user_id`** → il voit les mêmes données.
-- La **cohérence** entre devices est garantie par la base (transactions, `UNIQUE(user_id, title)`), ce qui résout l'écart #4 de l'analyse (écritures concurrentes) que le fichier JSON ne gérait pas.
+- Same account signed in on several machines; **each device has its own tokens** but the **same `user_id`** → it sees the same data.
+- **Consistency** across devices is guaranteed by the database (transactions, `UNIQUE(user_id, title)`), which resolves gap #4 from the analysis (concurrent writes) that the JSON file did not handle.
 
-### 5.5 Vérification des JWT côté serveur (modes d'auth)
+### 5.5 Server-side JWT verification (auth modes)
 
-Le serveur **valide** seulement les JWT entrants (signature + expiry + `sub`) ; il
-ne parle jamais à Supabase. Trois modes existent, sélectionnés par environnement
-dans `AuthInterceptorFromEnv` (`server/authconfig.go`), du plus spécifique au
-fallback :
+The server only **validates** incoming JWTs (signature + expiry + `sub`); it
+never talks to Supabase. Three modes exist, selected by environment in
+`AuthInterceptorFromEnv` (`server/authconfig.go`), from most specific to the
+fallback:
 
-| Précédence | Variable(s) | Vérificateur | Usage |
+| Precedence | Variable(s) | Verifier | Usage |
 | --- | --- | --- | --- |
-| 1 (gagne toujours) | `JWT_SIGNING_KEY` | `HMACVerifier` (HS256) | Override **home/dev** — un développeur peut toujours forcer le secret maison. |
-| 2 | `SUPABASE_URL` **ou** `SUPABASE_JWKS_URL` | `JWKSVerifier` (ES256/RS256) | **Mode JWKS / cible (Option B)** : valide les tokens asymétriques via la clé publique du projet. |
-| 3 | `SUPABASE_JWT_SECRET` | `HMACVerifier` (HS256) | **Legacy (Option A)** : valide les tokens HS256 contre le secret partagé du projet. |
-| 4 (défaut) | — (aucune) | `DevUserIDInterceptor` | Auth OFF — le run local par défaut continue de marcher. |
+| 1 (always wins) | `JWT_SIGNING_KEY` | `HMACVerifier` (HS256) | **home/dev** override — a developer can always force the homegrown secret. |
+| 2 | `SUPABASE_URL` **or** `SUPABASE_JWKS_URL` | `JWKSVerifier` (ES256/RS256) | **JWKS / target mode (Option B)**: validates asymmetric tokens via the project's public key. |
+| 3 | `SUPABASE_JWT_SECRET` | `HMACVerifier` (HS256) | **Legacy (Option A)**: validates HS256 tokens against the project's shared secret. |
+| 4 (default) | — (none) | `DevUserIDInterceptor` | Auth OFF — the default local run keeps working. |
 
-- **Mode JWKS (Option B, cible).** Quand `SUPABASE_URL` est défini, le serveur
-  dérive l'endpoint JWKS `{SUPABASE_URL}/auth/v1/.well-known/jwks.json` (même
-  préfixe `/auth/v1` que le CLI). `SUPABASE_JWKS_URL` permet d'**override** cet
-  endpoint avec une URL complète (tests / déploiements non standard) et prime sur
-  `SUPABASE_URL`. Le `JWKSVerifier` récupère la (les) clé(s) publique(s) de
-  façon **paresseuse au premier `Verify`** (le démarrage du serveur ne dépend pas
-  de la joignabilité du JWKS), les met en cache par `kid` avec un TTL et un
-  refetch sur `kid` inconnu (rotation de clés), et vérifie la signature en
-  ES256/RS256.
-- **La clé de signature ACTIVE du projet Supabase peut rester ECC/ES256.** C'est
-  précisément le choix Option B : plus besoin de rétrograder le projet en HS256.
-  Le serveur valide directement les tokens asymétriques via le JWKS public.
-- **Forcer le legacy HS256 (Option A).** Pour rester sur le secret HS256
-  partagé, ne définir que `SUPABASE_JWT_SECRET` côté serveur (sans `SUPABASE_URL`
-  ni `SUPABASE_JWKS_URL`). Cela suppose que le projet émet toujours des tokens
-  HS256.
-- Les trois modes renvoient la même `Identity{UserID: sub, Email: <claim email>}`,
-  donc l'isolation par `user_id` et le provisioning JIT des `users` fonctionnent à
-  l'identique quel que soit le mode.
+- **JWKS mode (Option B, target).** When `SUPABASE_URL` is set, the server
+  derives the JWKS endpoint `{SUPABASE_URL}/auth/v1/.well-known/jwks.json` (same
+  `/auth/v1` prefix as the CLI). `SUPABASE_JWKS_URL` lets you **override** that
+  endpoint with a full URL (tests / non-standard deployments) and takes priority
+  over `SUPABASE_URL`. The `JWKSVerifier` fetches the public key(s) **lazily on
+  the first `Verify`** (server startup does not depend on the JWKS being
+  reachable), caches them by `kid` with a TTL and a refetch on an unknown `kid`
+  (key rotation), and verifies the signature in ES256/RS256.
+- **The Supabase project's ACTIVE signing key can stay ECC/ES256.** That is
+  precisely the point of Option B: no longer any need to downgrade the project to
+  HS256. The server validates the asymmetric tokens directly via the public JWKS.
+- **Forcing legacy HS256 (Option A).** To stay on the shared HS256 secret, set
+  only `SUPABASE_JWT_SECRET` on the server side (without `SUPABASE_URL` or
+  `SUPABASE_JWKS_URL`). This assumes the project still issues HS256 tokens.
+- All three modes return the same `Identity{UserID: sub, Email: <email claim>}`,
+  so the `user_id` isolation and the JIT provisioning of `users` work identically
+  regardless of the mode.
 
-## 6. Changements de configuration et de déploiement
+## 6. Configuration and deployment changes
 
-### 6.1 Du daemon launchd local au serveur hébergé
+### 6.1 From the local launchd daemon to a hosted server
 
-- **Aujourd'hui** : le serveur tourne en local via **launchd** (`docs/daemon-setup.md`) sur la machine de l'utilisateur, écoute `127.0.0.1:50051`.
-- **Cible** : le serveur est **hébergé sur un PaaS free tier (Fly.io)**, accessible publiquement en **TLS**. **Fin du launchd local** ; `daemon-setup.md` deviendra "déploiement serveur distant". Le CLI local ne lance plus de serveur.
+- **Today**: the server runs locally via **launchd** (`docs/daemon-setup.md`) on the user's machine, listening on `127.0.0.1:50051`.
+- **Target**: the server is **hosted on a free-tier PaaS (Fly.io)**, publicly reachable over **TLS**. **End of the local launchd**; `daemon-setup.md` will become "remote server deployment". The local CLI no longer starts a server.
 
-### 6.2 Variables d'environnement et secrets
+### 6.2 Environment variables and secrets
 
-Côté **serveur** (jamais dans le repo — secrets PaaS / env) :
+On the **server** side (never in the repo — PaaS secrets / env):
 
-| Variable | Rôle |
+| Variable | Role |
 | --- | --- |
-| `DATABASE_URL` | Chaîne de connexion Postgres (Neon) — secret |
-| `SUPABASE_URL` | URL projet bare (`https://<ref>.supabase.co`) → active le **mode JWKS / ES256 (Option B)** ; le serveur dérive `{SUPABASE_URL}/auth/v1/.well-known/jwks.json` |
-| `SUPABASE_JWKS_URL` | Override de l'endpoint JWKS (URL complète) ; prime sur `SUPABASE_URL` |
-| `SUPABASE_JWT_SECRET` | Secret HS256 legacy pour **valider** les JWT (mode Supabase **Option A**) |
-| `JWT_SIGNING_KEY` | Secret de signature (mode auth maison/dev — gagne sur tout le reste) |
-| `TLS_CERT_PATH` / `TLS_KEY_PATH` | Certificat TLS (ou TLS terminé par le PaaS) |
-| `PORT` | Port d'écoute fourni par le PaaS |
+| `DATABASE_URL` | Postgres (Neon) connection string — secret |
+| `SUPABASE_URL` | Bare project URL (`https://<ref>.supabase.co`) → enables **JWKS / ES256 mode (Option B)**; the server derives `{SUPABASE_URL}/auth/v1/.well-known/jwks.json` |
+| `SUPABASE_JWKS_URL` | Override of the JWKS endpoint (full URL); takes priority over `SUPABASE_URL` |
+| `SUPABASE_JWT_SECRET` | Legacy HS256 secret to **validate** the JWTs (Supabase **Option A** mode) |
+| `JWT_SIGNING_KEY` | Signing secret (homegrown/dev auth mode — wins over everything else) |
+| `TLS_CERT_PATH` / `TLS_KEY_PATH` | TLS certificate (or TLS terminated by the PaaS) |
+| `PORT` | Listening port provided by the PaaS |
 
-Précédence d'auth serveur : `JWT_SIGNING_KEY` (home/dev) > `SUPABASE_URL`/`SUPABASE_JWKS_URL` (JWKS, cible) > `SUPABASE_JWT_SECRET` (HS256 legacy) > aucune (auth OFF). Détail en §5.5.
+Server auth precedence: `JWT_SIGNING_KEY` (home/dev) > `SUPABASE_URL`/`SUPABASE_JWKS_URL` (JWKS, target) > `SUPABASE_JWT_SECRET` (HS256 legacy) > none (auth OFF). Details in §5.5.
 
-Côté **CLI** :
+On the **CLI** side:
 
-| Variable / flag | Rôle |
+| Variable / flag | Role |
 | --- | --- |
-| `TODO_SERVER_ENDPOINT` (env) ou `--endpoint` (flag) ou config | Adresse du serveur gRPC distant (remplace le `127.0.0.1:50051` codé en dur) |
-| `~/.config/todolist/credentials.json` (0600) | Tokens d'auth (généré par `login`) |
+| `TODO_SERVER_ENDPOINT` (env) or `--endpoint` (flag) or config | Address of the remote gRPC server (replaces the hard-coded `127.0.0.1:50051`) |
+| `~/.config/todolist/credentials.json` (0600) | Auth tokens (generated by `login`) |
 
-### 6.3 Gestion des secrets
+### 6.3 Secret management
 
-- Secrets stockés via le **secret manager du PaaS** (Fly.io secrets) et/ou variables d'env d'exécution. **Jamais** committés.
-- `DATABASE_URL` et le secret JWT ne quittent jamais le serveur ; le CLI ne connaît **que** son endpoint et ses tokens.
+- Secrets stored via the **PaaS secret manager** (Fly.io secrets) and/or runtime env variables. **Never** committed.
+- `DATABASE_URL` and the JWT secret never leave the server; the CLI knows **only** its endpoint and its tokens.
 
-## 7. Prérequis sécurité (rappel de l'analyse §8)
+## 7. Security prerequisites (reminder from analysis §8)
 
-Repris de `remote-storage-analysis.md` §8 — à traiter à l'implémentation (étape suivante) :
+Carried over from `remote-storage-analysis.md` §8 — to be addressed at implementation time (next step):
 
-- [ ] **TLS** sur le transport gRPC (remplace `insecure.NewCredentials()`).
-- [ ] **Intercepteur d'authentification** serveur : validation JWT → `user_id` dans le `context`.
-- [ ] **Isolation par `user_id`** dans chaque RPC et chaque requête SQL **paramétrée**.
-- [ ] **Secrets** (`DATABASE_URL`, secret JWT) via env / secret manager, hors repo.
-- [ ] **Timeouts / retries** côté client gRPC (absents aujourd'hui), pour un réseau distant.
-- [ ] **Sauvegardes** et plan de restauration de la base.
+- [ ] **TLS** on the gRPC transport (replaces `insecure.NewCredentials()`).
+- [ ] **Server-side authentication interceptor**: JWT validation → `user_id` in the `context`.
+- [ ] **Isolation by `user_id`** in every RPC and every **parameterized** SQL query.
+- [ ] **Secrets** (`DATABASE_URL`, JWT secret) via env / secret manager, outside the repo.
+- [ ] **Timeouts / retries** on the gRPC client side (absent today), for a remote network.
+- [ ] **Backups** and a database restore plan.
 
 ---
 
-*Document de décision/conception uniquement — aucune implémentation de production. DDL et signatures fournis à titre illustratif. Étape suivante : plan d'implémentation détaillé.*
+*Decision/design document only — no production implementation. DDL and signatures provided for illustration. Next step: detailed implementation plan.*

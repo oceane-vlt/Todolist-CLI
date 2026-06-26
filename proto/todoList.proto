@@ -2,18 +2,18 @@ syntax = "proto3";
 
 package todo;
 
-// Phase 7 (volet B canonique) : annotations google.api.http pour générer une
-// gateway REST/JSON via protoc-gen-grpc-gateway. Ce mapping REST reflète 1:1
-// l'adaptateur manuel cmd/gateway (volet A) déjà opérationnel.
+// Phase 7 (canonical part B): google.api.http annotations to generate a
+// REST/JSON gateway via protoc-gen-grpc-gateway. This REST mapping mirrors 1:1
+// the manual cmd/gateway adapter (part A) that is already operational.
 //
-// IMPORTANT : l'import "google/api/annotations.proto" n'est PAS vendoré dans ce
-// repo. Il est résolu par buf (dépendance buf.build/googleapis/googleapis,
-// cf. buf.yaml) lors de la génération via `make proto` / `make proto-gateway`.
-// Tant que cet import et les annotations google.api.http sont présents, la
-// cible legacy `make proto-protoc` (plain protoc, go/go-grpc seulement) ÉCHOUE
-// car protoc ne sait pas résoudre google/api/annotations.proto (absent du
-// include path) : elle n'est PLUS un repli viable. La génération passe
-// désormais OBLIGATOIREMENT par buf. Voir docs/grpc-gateway.md §4.
+// IMPORTANT: the "google/api/annotations.proto" import is NOT vendored in this
+// repo. It is resolved by buf (the buf.build/googleapis/googleapis dependency,
+// see buf.yaml) during generation via `make proto` / `make proto-gateway`.
+// As long as this import and the google.api.http annotations are present, the
+// legacy target `make proto-protoc` (plain protoc, go/go-grpc only) FAILS
+// because protoc cannot resolve google/api/annotations.proto (absent from the
+// include path): it is NO LONGER a viable fallback. Generation now MUST go
+// through buf. See docs/grpc-gateway.md §4.
 import "google/api/annotations.proto";
 
 option go_package = "github.com/oceane-vlt/todolist/proto;todo";

@@ -1,145 +1,145 @@
-# Analyse : passage d'un stockage local à un stockage distant
+# Analysis: moving from local storage to remote storage
 
-> Document d'**analyse** (pas d'implémentation). Objectif : permettre de retrouver ses todolists depuis plusieurs machines, en gardant un backend réutilisable par un futur front web.
+> **Analysis** document (not implementation). Goal: be able to access your todolists from multiple machines, while keeping a backend reusable by a future web frontend.
 
-## 1. Contexte et architecture actuelle
+## 1. Context and current architecture
 
-État des lieux du code (vérifié sur les sources) :
+State of the code (verified against the sources):
 
-| Couche | Fichier | État actuel |
+| Layer | File | Current state |
 | --- | --- | --- |
-| CLI client | `cmd/todo/main.go` | Client gRPC, `dial 127.0.0.1:50051`, `insecure.NewCredentials()` — **pas de TLS, pas d'auth, pas de timeout/retry** |
-| Serveur | `cmd/server/main.go` | Serveur gRPC, `net.Listen("tcp","127.0.0.1:50051")` — **mono-utilisateur, pas d'auth, pas de TLS, pas d'intercepteurs** ; daemon launchd (macOS) |
-| Contrat | `proto/todoList.proto` | `TodoListService`, 7 RPC. Listes indexées par **Title** uniquement. **Aucune notion de compte/utilisateur** |
-| Stockage | `libs/storage/common.go` | `TodoData{Lists map[string][]TodoItem}` sérialisé dans un **unique fichier JSON** `~/.config/todolist/data.json` via `os.WriteFile` (réécriture complète, `0644`). **Pas de lock, pas de transaction, pas de contrôle de concurrence** |
-| Dépendances | `go.mod` | go 1.24, grpc v1.76, protobuf v1.36, cobra, promptui. **Pas de driver DB, pas de framework HTTP, pas de lib d'auth** |
+| CLI client | `cmd/todo/main.go` | gRPC client, `dial 127.0.0.1:50051`, `insecure.NewCredentials()` — **no TLS, no auth, no timeout/retry** |
+| Server | `cmd/server/main.go` | gRPC server, `net.Listen("tcp","127.0.0.1:50051")` — **single-user, no auth, no TLS, no interceptors**; launchd daemon (macOS) |
+| Contract | `proto/todoList.proto` | `TodoListService`, 7 RPCs. Lists indexed by **Title** only. **No notion of account/user** |
+| Storage | `libs/storage/common.go` | `TodoData{Lists map[string][]TodoItem}` serialized into a **single JSON file** `~/.config/todolist/data.json` via `os.WriteFile` (full rewrite, `0644`). **No lock, no transaction, no concurrency control** |
+| Dependencies | `go.mod` | go 1.24, grpc v1.76, protobuf v1.36, cobra, promptui. **No DB driver, no HTTP framework, no auth lib** |
 
-Le découpage en couches est propre :
+The layering is clean:
 
 ```
-cmd/todo (client) -> proto (contrat) -> server (impl gRPC) -> libs/storage (persistance)
+cmd/todo (client) -> proto (contract) -> server (gRPC impl) -> libs/storage (persistence)
 ```
 
-**Le contrat gRPC est la couture (« seam ») naturelle** à conserver. On remplace `libs/storage` (JSON local) par un accès à une base distante, derrière le même serveur gRPC. Un futur front web pourra réutiliser ce backend via **gRPC-Web** ou **gRPC-Gateway** (REST/JSON généré depuis le `.proto`).
+**The gRPC contract is the natural seam** to preserve. We replace `libs/storage` (local JSON) with access to a remote database, behind the same gRPC server. A future web frontend will be able to reuse this backend via **gRPC-Web** or **gRPC-Gateway** (REST/JSON generated from the `.proto`).
 
-## 2. Écarts à combler pour le distant / multi-device / multi-user
+## 2. Gaps to close for remote / multi-device / multi-user
 
-1. **Authentification + autorisation** : inexistantes aujourd'hui.
-2. **Sécurité du transport (TLS)** : connexion `insecure` aujourd'hui.
-3. **Isolation des données par utilisateur** : les listes sont globales (clé = Title).
-4. **Sécurité des écritures concurrentes** : aucune (réécriture de fichier complet).
-5. **Hébergement du serveur** publiquement accessible.
+1. **Authentication + authorization**: nonexistent today.
+2. **Transport security (TLS)**: `insecure` connection today.
+3. **Per-user data isolation**: lists are global (key = Title).
+4. **Concurrent-write safety**: none (full file rewrite).
+5. **Publicly reachable** server hosting.
 
-Ces points sont **transverses** : ils valent quelle que soit l'option de stockage choisie.
+These points are **cross-cutting**: they apply whatever storage option is chosen.
 
-## 3. Options de stockage / backend distant
+## 3. Remote storage / backend options
 
-Critères : coût (gratuit si possible), sécurité, multi-device, multi-utilisateur, hébergement, et **réutilisabilité par un front web**.
+Criteria: cost (free if possible), security, multi-device, multi-user, hosting, and **reusability by a web frontend**.
 
-### Option A — PostgreSQL managé sur free tier (Supabase / Neon / Fly.io Postgres)
+### Option A — Managed PostgreSQL on a free tier (Supabase / Neon / Fly.io Postgres)
 
-- **Principe** : le serveur gRPC actuel reste le seul à parler à la base ; on remplace `libs/storage` par un accès SQL (`pgx`/`database/sql`). On héberge le serveur gRPC quelque part (Fly.io, Railway, Render free tier).
-- **Coût** : Neon et Supabase ont des free tiers durables ; Fly.io / Railway / Render aussi (avec limites/mise en veille).
-- **Multi-device / multi-user** : excellent. Schéma `users` + `lists` + `items` avec `user_id` ; transactions et contraintes SQL résolvent la concurrence (écart #4) nativement.
-- **Réutilisation web** : le front web tape le **même serveur gRPC** (via gRPC-Gateway/gRPC-Web), pas la base directement → backend partagé, logique métier centralisée.
-- **Risques sécurité** :
-  - Chaîne de connexion (secret) à protéger (variables d'env / secret manager, jamais dans le repo).
-  - Surface d'attaque = le serveur gRPC exposé : **exige TLS + auth + isolation par `user_id`** (sinon n'importe qui lit toutes les listes).
-  - Injection SQL si requêtes concaténées → utiliser des requêtes paramétrées.
-- **Verdict** : aligné avec l'archi actuelle (garde le serveur gRPC comme unique gardien des données), évolue bien, et **colle au "SQLite planned" du README** (Postgres = même modèle relationnel, mais distant).
+- **Principle**: the current gRPC server remains the only one talking to the database; we replace `libs/storage` with SQL access (`pgx`/`database/sql`). We host the gRPC server somewhere (Fly.io, Railway, Render free tier).
+- **Cost**: Neon and Supabase have durable free tiers; Fly.io / Railway / Render too (with limits/idling).
+- **Multi-device / multi-user**: excellent. `users` + `lists` + `items` schema with `user_id`; SQL transactions and constraints natively solve concurrency (gap #4).
+- **Web reuse**: the web frontend hits the **same gRPC server** (via gRPC-Gateway/gRPC-Web), not the database directly → shared backend, centralized business logic.
+- **Security risks**:
+  - Connection string (secret) must be protected (env variables / secret manager, never in the repo).
+  - Attack surface = the exposed gRPC server: **requires TLS + auth + `user_id` isolation** (otherwise anyone can read all the lists).
+  - SQL injection if queries are concatenated → use parameterized queries.
+- **Verdict**: aligned with the current architecture (keeps the gRPC server as the sole data gatekeeper), scales well, and **matches the README's "SQLite planned"** (Postgres = same relational model, but remote).
 
 ### Option B — Firebase / Firestore (BaaS, NoSQL)
 
-- **Principe** : les clients (CLI **et** front web) parlent directement à Firestore via les SDK, avec règles de sécurité côté Firebase.
-- **Coût** : free tier (Spark) généreux pour un usage perso.
-- **Multi-device / multi-user** : natif, sync temps réel inclus.
-- **Réutilisation web** : très bon (SDK web first-class).
-- **Risques sécurité** :
-  - **Contourne le serveur gRPC** : la sécurité repose entièrement sur les *Security Rules* Firestore (faciles à mal configurer → fuite de données). Pas de SDK admin Go côté CLI sans service account à protéger.
-  - Lock-in fort sur l'écosystème Google.
-  - Le modèle de données NoSQL ne correspond pas au modèle relationnel actuel ; il faudrait repenser le schéma.
-- **Verdict** : rapide à démarrer mais **casse la couture gRPC** (le backend métier n'est plus central) → moins aligné avec l'objectif "même backend réutilisé".
+- **Principle**: the clients (CLI **and** web frontend) talk directly to Firestore via the SDKs, with security rules on the Firebase side.
+- **Cost**: generous free tier (Spark) for personal use.
+- **Multi-device / multi-user**: native, real-time sync included.
+- **Web reuse**: very good (first-class web SDK).
+- **Security risks**:
+  - **Bypasses the gRPC server**: security rests entirely on Firestore *Security Rules* (easy to misconfigure → data leak). No Go admin SDK on the CLI side without a service account to protect.
+  - Strong lock-in to the Google ecosystem.
+  - The NoSQL data model does not match the current relational model; the schema would need to be rethought.
+- **Verdict**: quick to start but **breaks the gRPC seam** (the business backend is no longer central) → less aligned with the "same reused backend" goal.
 
-### Option C — SQLite + Litestream (réplication vers stockage objet)
+### Option C — SQLite + Litestream (replication to object storage)
 
-- **Principe** : on garde SQLite local côté serveur, répliqué en continu vers un stockage objet (S3/Backblaze B2).
-- **Coût** : très faible.
-- **Multi-device / multi-user** : **mauvais** pour de l'écriture concurrente multi-machine. Litestream = réplication/restauration (DR), **pas** une base multi-writer. Ne résout pas le multi-device en écriture.
-- **Verdict** : **écarté** pour cet objectif (multi-device en écriture est le cœur du besoin).
+- **Principle**: keep SQLite local on the server side, continuously replicated to object storage (S3/Backblaze B2).
+- **Cost**: very low.
+- **Multi-device / multi-user**: **poor** for concurrent multi-machine writes. Litestream = replication/restore (DR), **not** a multi-writer database. Does not solve multi-device writes.
+- **Verdict**: **discarded** for this goal (multi-device writes are the core need).
 
 ### Option D — MongoDB Atlas (free tier M0)
 
-- **Principe** : base document managée, le serveur gRPC y accède.
-- **Coût** : free tier M0 (512 Mo).
-- **Multi-device / multi-user** : bon.
-- **Réutilisation web** : bon via le serveur gRPC.
-- **Risques sécurité** : config réseau (IP allowlist), secret de connexion ; historiquement, des instances mal configurées ont fuité. Modèle document à concevoir.
-- **Verdict** : viable, mais le modèle relationnel (Postgres) colle mieux aux données todolist structurées et au "SQLite planned".
+- **Principle**: managed document database, accessed by the gRPC server.
+- **Cost**: free tier M0 (512 MB).
+- **Multi-device / multi-user**: good.
+- **Web reuse**: good via the gRPC server.
+- **Security risks**: network config (IP allowlist), connection secret; historically, misconfigured instances have leaked. Document model to be designed.
+- **Verdict**: viable, but the relational model (Postgres) fits the structured todolist data and the "SQLite planned" better.
 
-### Option E — VPS auto-hébergé (Postgres + serveur gRPC sur la même VM)
+### Option E — Self-hosted VPS (Postgres + gRPC server on the same VM)
 
-- **Principe** : un petit VPS (Oracle Cloud Free Tier, etc.), full contrôle.
-- **Coût** : possible gratuit (Oracle Always Free) mais variable.
-- **Risques sécurité** : **toute la charge d'ops/sécurité repose sur soi** (patchs OS, firewall, fail2ban, renouvellement TLS, sauvegardes). Surface et effort élevés.
-- **Verdict** : flexible mais coûteux en maintenance/sécurité pour un projet perso.
+- **Principle**: a small VPS (Oracle Cloud Free Tier, etc.), full control.
+- **Cost**: possibly free (Oracle Always Free) but variable.
+- **Security risks**: **the entire ops/security burden falls on you** (OS patches, firewall, fail2ban, TLS renewal, backups). High surface and effort.
+- **Verdict**: flexible but costly in maintenance/security for a personal project.
 
-## 4. Comparaison synthétique
+## 4. Summary comparison
 
-| Option | Coût gratuit | Multi-device (écriture) | Multi-user | Réutilise le serveur gRPC | Effort sécurité/ops | Aligné archi actuelle |
+| Option | Free cost | Multi-device (writes) | Multi-user | Reuses the gRPC server | Security/ops effort | Aligned with current arch |
 | --- | --- | --- | --- | --- | --- | --- |
-| A. Postgres managé | Oui (Neon/Supabase) | Excellent | Excellent | **Oui** | Moyen | **Fort** |
-| B. Firestore | Oui | Excellent | Excellent | Non (court-circuité) | Moyen (règles) | Faible |
-| C. SQLite+Litestream | Oui | **Faible** | Faible | Oui | Faible | Moyen |
-| D. MongoDB Atlas | Oui (M0) | Bon | Bon | Oui | Moyen | Moyen |
-| E. VPS auto-hébergé | Variable | Bon | Bon | Oui | **Élevé** | Moyen |
+| A. Managed Postgres | Yes (Neon/Supabase) | Excellent | Excellent | **Yes** | Medium | **Strong** |
+| B. Firestore | Yes | Excellent | Excellent | No (short-circuited) | Medium (rules) | Weak |
+| C. SQLite+Litestream | Yes | **Poor** | Poor | Yes | Low | Medium |
+| D. MongoDB Atlas | Yes (M0) | Good | Good | Yes | Medium | Medium |
+| E. Self-hosted VPS | Variable | Good | Good | Yes | **High** | Medium |
 
-## 5. Authentification — options et risques
+## 5. Authentication — options and risks
 
-Quelle que soit la base, le **serveur gRPC** doit authentifier l'appelant (sauf option B où c'est Firebase).
+Whatever the database, the **gRPC server** must authenticate the caller (except option B where Firebase does it).
 
-| Approche | Description | Avantages | Risques / limites |
+| Approach | Description | Pros | Risks / limits |
 | --- | --- | --- | --- |
-| **Clé API par utilisateur** | Token opaque envoyé en metadata gRPC | Simple à implémenter | Révocation/rotation à gérer ; si fuite, accès total ; pas de standard de scope |
-| **JWT signé (court) + refresh** | Le serveur émet un JWT après login | Standard, sans état côté serveur, portable web | Gestion de l'expiration/refresh ; secret de signature à protéger ; révocation = besoin d'une blacklist |
-| **OAuth/OIDC (Google, GitHub)** | Délégation d'identité à un fournisseur | Pas de gestion de mots de passe ; bon pour le futur front web | Plus complexe à câbler ; dépendance à un IdP |
-| **Auth managée (Supabase Auth / Firebase Auth)** | Le BaaS fournit login + tokens | Réduit le code d'auth ; émet des JWT vérifiables côté serveur | Lock-in ; le serveur doit valider les JWT du fournisseur |
+| **Per-user API key** | Opaque token sent in gRPC metadata | Simple to implement | Revocation/rotation to manage; if leaked, full access; no scope standard |
+| **Signed (short) JWT + refresh** | The server issues a JWT after login | Standard, stateless on the server side, web-portable | Expiration/refresh handling; signing secret to protect; revocation = needs a blacklist |
+| **OAuth/OIDC (Google, GitHub)** | Identity delegation to a provider | No password management; good for the future web frontend | More complex to wire; dependency on an IdP |
+| **Managed auth (Supabase Auth / Firebase Auth)** | The BaaS provides login + tokens | Reduces auth code; issues server-verifiable JWTs | Lock-in; the server must validate the provider's JWTs |
 
-Points communs à tous :
-- **TLS obligatoire** dès qu'on quitte le localhost (écart #2) — sinon credentials/tokens en clair.
-- Transmettre le token via **metadata gRPC** + un **intercepteur** côté serveur qui authentifie et injecte le `user_id` dans le `context`.
-- **Isolation par `user_id`** appliquée dans chaque RPC (écart #3) : ne jamais faire confiance au client pour le périmètre des données.
+Common to all:
+- **TLS mandatory** as soon as you leave localhost (gap #2) — otherwise credentials/tokens in clear text.
+- Pass the token via **gRPC metadata** + a server-side **interceptor** that authenticates and injects the `user_id` into the `context`.
+- **`user_id` isolation** enforced in every RPC (gap #3): never trust the client for the data scope.
 
-## 6. Impacts sur le contrat (`proto`) et le futur web
+## 6. Impacts on the contract (`proto`) and the future web
 
-- Le `.proto` actuel n'a **aucune notion d'utilisateur** ; l'identité passera par les **metadata/token** (pas par un champ `user_id` dans les messages — le client ne doit pas pouvoir l'usurper).
-- Indexer les listes par `(user_id, title)` côté serveur/base au lieu de `title` seul.
-- Pour le **futur front web** : exposer le même service via **gRPC-Gateway** (REST/JSON) ou **gRPC-Web**, généré depuis le `.proto` → un seul backend, deux clients (CLI + web).
+- The current `.proto` has **no notion of user**; identity will travel via the **metadata/token** (not via a `user_id` field in the messages — the client must not be able to spoof it).
+- Index lists by `(user_id, title)` on the server/database side instead of `title` alone.
+- For the **future web frontend**: expose the same service via **gRPC-Gateway** (REST/JSON) or **gRPC-Web**, generated from the `.proto` → a single backend, two clients (CLI + web).
 
-## 7. Recommandation argumentée
+## 7. Reasoned recommendation
 
-**Recommandation : Option A — PostgreSQL managé sur free tier (Neon ou Supabase), serveur gRPC conservé comme unique gardien des données, auth par JWT (idéalement via Supabase Auth pour limiter le code), TLS de bout en bout, isolation par `user_id`.**
+**Recommendation: Option A — Managed PostgreSQL on a free tier (Neon or Supabase), gRPC server kept as the sole data gatekeeper, JWT auth (ideally via Supabase Auth to limit code), end-to-end TLS, `user_id` isolation.**
 
-Pourquoi :
+Why:
 
-1. **Respecte l'architecture existante** : on garde la couture gRPC propre (`cmd/todo` → `proto` → `server` → persistance). Seul `libs/storage` change (JSON → SQL). Le reste du code bouge peu.
-2. **Backend réellement partagé** : contrairement à Firestore (option B), le front web futur tapera le **même serveur gRPC** (via gRPC-Gateway), donc la logique métier et la sécurité restent centralisées en un seul endroit.
-3. **Multi-device / multi-user résolu nativement** : transactions et contraintes SQL règlent la concurrence (écart #4), `user_id` règle l'isolation (écart #3).
-4. **Gratuit et pérenne** : Neon/Supabase offrent des free tiers durables suffisants pour un usage perso.
-5. **Continuité avec la feuille de route** : le README annonce déjà "SQLite planned" ; passer à Postgres distant est l'évolution naturelle du même modèle relationnel.
+1. **Respects the existing architecture**: we keep the clean gRPC seam (`cmd/todo` → `proto` → `server` → persistence). Only `libs/storage` changes (JSON → SQL). The rest of the code moves little.
+2. **Truly shared backend**: unlike Firestore (option B), the future web frontend will hit the **same gRPC server** (via gRPC-Gateway), so business logic and security stay centralized in one place.
+3. **Multi-device / multi-user solved natively**: SQL transactions and constraints handle concurrency (gap #4), `user_id` handles isolation (gap #3).
+4. **Free and durable**: Neon/Supabase offer durable free tiers sufficient for personal use.
+5. **Continuity with the roadmap**: the README already announces "SQLite planned"; moving to remote Postgres is the natural evolution of the same relational model.
 
-Choix d'auth recommandé : **Supabase Auth (qui émet des JWT)** si on prend Supabase comme base, sinon **JWT maison + OAuth GitHub/Google** pour préparer le front web sans gérer de mots de passe.
+Recommended auth choice: **Supabase Auth (which issues JWTs)** if Supabase is chosen as the database, otherwise **homemade JWT + GitHub/Google OAuth** to prepare the web frontend without managing passwords.
 
-À éviter pour cet objectif : SQLite+Litestream (option C, pas multi-writer) et Firestore (option B, court-circuite le backend gRPC visé).
+To avoid for this goal: SQLite+Litestream (option C, not multi-writer) and Firestore (option B, short-circuits the targeted gRPC backend).
 
-## 8. Prérequis sécurité (à traiter quelle que soit l'option)
+## 8. Security prerequisites (to address regardless of the option)
 
-- [ ] Activer **TLS** sur le transport gRPC (remplacer `insecure.NewCredentials()`).
-- [ ] Ajouter un **intercepteur d'authentification** côté serveur (validation token → `user_id` dans le `context`).
-- [ ] **Isoler les données par `user_id`** dans chaque RPC et chaque requête SQL (requêtes paramétrées).
-- [ ] Gérer les **secrets** (chaîne de connexion DB, secret JWT) via variables d'env / secret manager, hors du repo.
-- [ ] Ajouter **timeouts/retries** côté client gRPC (absents aujourd'hui) pour un réseau distant.
-- [ ] Mettre en place **sauvegardes** et un plan de restauration de la base.
+- [ ] Enable **TLS** on the gRPC transport (replace `insecure.NewCredentials()`).
+- [ ] Add an **authentication interceptor** on the server side (token validation → `user_id` in the `context`).
+- [ ] **Isolate data by `user_id`** in every RPC and every SQL query (parameterized queries).
+- [ ] Manage **secrets** (DB connection string, JWT secret) via env variables / secret manager, outside the repo.
+- [ ] Add **timeouts/retries** on the gRPC client side (absent today) for a remote network.
+- [ ] Set up **backups** and a database restore plan.
 
 ---
 
-*Analyse uniquement — aucune implémentation à ce stade. Étape suivante possible : un plan d'implémentation détaillé (migration `libs/storage` vers Postgres, schéma SQL, intercepteur auth, TLS, gRPC-Gateway).*
+*Analysis only — no implementation at this stage. Possible next step: a detailed implementation plan (migrating `libs/storage` to Postgres, SQL schema, auth interceptor, TLS, gRPC-Gateway).*

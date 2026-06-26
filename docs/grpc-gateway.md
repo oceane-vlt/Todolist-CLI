@@ -1,165 +1,166 @@
-# Gateway REST/JSON (gRPC-Gateway) — Phase 7
+# REST/JSON gateway (gRPC-Gateway) — Phase 7
 
-> Statut : **hors v1** (le front web lui-même reste hors périmètre). Ce document
-> décrit comment exposer le **même** service gRPC en **REST/JSON** pour un futur
-> front web, conformément à `docs/target-architecture.md` §3 et à
+> Status: **out of v1** (the web front end itself is also out of scope). This
+> document describes how to expose the **same** gRPC service over **REST/JSON**
+> for a future web front end, in line with `docs/target-architecture.md` §3 and
 > `docs/implementation-plan.md` Phase 7.
 
-La Phase 7 est livrée en **deux volets complémentaires** :
+Phase 7 is delivered in **two complementary parts**:
 
-| Volet | Quoi | État | Outillage requis |
-|-------|------|------|------------------|
-| **A — opérationnel** | Adaptateur REST/JSON écrit à la main (`cmd/gateway`) qui réutilise le client gRPC déjà généré | **Fonctionne aujourd'hui**, `go build`/`go test` verts | Aucun (stdlib + `protojson` déjà présents) |
-| **B — canonique** | Annotations `google.api.http` dans le `.proto` + config `buf` pour générer le stub officiel `*.gw.pb.go` | **Config + annotations présentes**, génération à exécuter quand l'outillage est installé | `buf` + plugins `protoc-gen-*` |
+| Part | What | Status | Required tooling |
+|------|------|--------|------------------|
+| **A — operational** | Hand-written REST/JSON adapter (`cmd/gateway`) that reuses the already-generated gRPC client | **Works today**, `go build`/`go test` green | None (stdlib + `protojson`, already present) |
+| **B — canonical** | `google.api.http` annotations in the `.proto` + `buf` config to generate the official `*.gw.pb.go` stub | **Config + annotations present**, generation to be run once the tooling is installed | `buf` + `protoc-gen-*` plugins |
 
-Les deux volets exposent **exactement le même mapping REST** : le volet A est
-l'équivalent manuel des annotations du volet B. On peut donc commencer avec le
-volet A et basculer vers le stub généré (volet B) sans changer le contrat HTTP.
+Both parts expose **exactly the same REST mapping**: part A is the manual
+equivalent of part B's annotations. You can therefore start with part A and
+switch to the generated stub (part B) without changing the HTTP contract.
 
 ---
 
-## 1. Mapping REST des 7 RPC
+## 1. REST mapping of the 7 RPCs
 
-Identique entre le volet A (`cmd/gateway/handler.go`) et le volet B (annotations
-`google.api.http` dans `proto/todoList.proto`) :
+Identical between part A (`cmd/gateway/handler.go`) and part B (`google.api.http`
+annotations in `proto/todoList.proto`):
 
-| RPC gRPC | Méthode + chemin HTTP | Corps (body) | `{title}` |
-|----------|-----------------------|--------------|-----------|
-| `CreateTodoList` | `POST /v1/lists` | `*` (toute la requête) | — |
+| gRPC RPC | HTTP method + path | Body | `{title}` |
+|----------|--------------------|------|-----------|
+| `CreateTodoList` | `POST /v1/lists` | `*` (the whole request) | — |
 | `GetTodoLists` | `GET /v1/lists` | — | — |
-| `DeleteTodoList` | `DELETE /v1/lists` | `*` (liste de titres) | — |
-| `ShowTodoListItems` | `GET /v1/lists/{title}/items` | — | depuis le path |
-| `UpdateTodoList` | `PUT /v1/lists/{title}/items` | `*` | depuis le path |
-| `UpdateTodoListItem` | `PATCH /v1/lists/{title}/items` | `*` | depuis le path |
-| `DeleteTodoListItems` | `DELETE /v1/lists/{title}/items` | `*` (indexes) | depuis le path |
+| `DeleteTodoList` | `DELETE /v1/lists` | `*` (list of titles) | — |
+| `ShowTodoListItems` | `GET /v1/lists/{title}/items` | — | from the path |
+| `UpdateTodoList` | `PUT /v1/lists/{title}/items` | `*` | from the path |
+| `UpdateTodoListItem` | `PATCH /v1/lists/{title}/items` | `*` | from the path |
+| `DeleteTodoListItems` | `DELETE /v1/lists/{title}/items` | `*` (indexes) | from the path |
 
-Pour les routes avec `{title}`, la valeur du **path écrase** un éventuel `title`
-présent dans le body (même sémantique des deux côtés).
+For routes with `{title}`, the **path value overrides** any `title` present in
+the body (same semantics on both sides).
 
-La (dé)sérialisation utilise **protojson** (JSON proto3 canonique, champs en
-`camelCase` : `dueDate`, `itemIndexes`, `newTitle`…), cohérent avec le stub
-gateway officiel.
+(De)serialization uses **protojson** (canonical proto3 JSON, fields in
+`camelCase`: `dueDate`, `itemIndexes`, `newTitle`…), consistent with the
+official gateway stub.
 
 ---
 
-## 2. Authentification : le Bearer est relayé, jamais validé par la gateway
+## 2. Authentication: the Bearer is relayed, never validated by the gateway
 
-Point central : la gateway **ne valide pas** le JWT. Elle se contente de
-**relayer** l'en-tête HTTP `Authorization` vers la **metadata gRPC**
-`authorization`. C'est l'intercepteur d'auth du serveur (Phase 3,
-`server/authinterceptor.go`) qui valide le token et en dérive le `user_id` —
-l'isolation par utilisateur est donc préservée **de bout en bout** :
+Key point: the gateway **does not validate** the JWT. It merely **relays** the
+HTTP `Authorization` header into the gRPC metadata `authorization`. It is the
+server's auth interceptor (Phase 3, `server/authinterceptor.go`) that validates
+the token and derives the `user_id` from it — per-user isolation is therefore
+preserved **end to end**:
 
 ```
-Front web  --HTTP-->  gateway  --gRPC metadata authorization: Bearer <jwt>-->  serveur gRPC
-                       (relais)                                                  (validation + user_id)
+Web front  --HTTP-->  gateway  --gRPC metadata authorization: Bearer <jwt>-->  gRPC server
+                       (relay)                                                  (validation + user_id)
 ```
 
-Codes d'erreur : la gateway traduit les codes gRPC en codes HTTP
+Error codes: the gateway translates gRPC codes into HTTP codes
 (`Unauthenticated` → 401, `NotFound` → 404, `AlreadyExists` → 409,
 `InvalidArgument` → 400, `Unavailable` → 503, `DeadlineExceeded` → 504, etc.).
-Un 401 côté front signale qu'il faut se ré-authentifier (miroir du refresh CLI).
+A 401 on the front-end side signals that re-authentication is needed (mirroring
+the CLI refresh).
 
 ---
 
-## 3. Volet A — lancer la gateway manuelle (aujourd'hui)
+## 3. Part A — run the manual gateway (today)
 
-Aucune génération de code n'est nécessaire.
+No code generation is required.
 
 ```sh
-# 1) Démarrer le serveur gRPC (local, défaut JSON/insecure)
-make run-server          # écoute 127.0.0.1:50051
+# 1) Start the gRPC server (local, defaults to JSON/insecure)
+make run-server          # listens on 127.0.0.1:50051
 
-# 2) Démarrer la gateway REST/JSON
-go run ./cmd/gateway     # écoute 127.0.0.1:8080 (loopback only par défaut)
+# 2) Start the REST/JSON gateway
+go run ./cmd/gateway     # listens on 127.0.0.1:8080 (loopback only by default)
 ```
 
-Variables d'environnement (`cmd/gateway/config.go`) :
+Environment variables (`cmd/gateway/config.go`):
 
-| Variable | Rôle | Défaut |
-|----------|------|--------|
-| `TODO_GATEWAY_ADDR` | Adresse d'écoute HTTP de la gateway | `127.0.0.1:8080` (loopback) |
-| `TODO_SERVER_ENDPOINT` | Serveur gRPC amont (même var que le CLI) | `127.0.0.1:50051` |
-| `TODO_GATEWAY_UPSTREAM_TLS` | TLS vers l'amont via pool système (cible prod) | insecure |
+| Variable | Role | Default |
+|----------|------|---------|
+| `TODO_GATEWAY_ADDR` | HTTP listen address of the gateway | `127.0.0.1:8080` (loopback) |
+| `TODO_SERVER_ENDPOINT` | Upstream gRPC server (same var as the CLI) | `127.0.0.1:50051` |
+| `TODO_GATEWAY_UPSTREAM_TLS` | TLS to the upstream via system pool (prod target) | insecure |
 
-Exemples `curl` (Bearer relayé en metadata) :
+`curl` examples (Bearer relayed as metadata):
 
 ```sh
-# Lister mes todolists (le JWT identifie l'utilisateur côté serveur)
+# List my todolists (the JWT identifies the user on the server side)
 curl -H "Authorization: Bearer $JWT" http://127.0.0.1:8080/v1/lists
 
-# Créer une liste
+# Create a list
 curl -X POST http://127.0.0.1:8080/v1/lists \
   -H "Authorization: Bearer $JWT" \
   -H "Content-Type: application/json" \
   -d '{"title":"courses","item":[{"title":"lait"}]}'
 
-# Voir les items d'une liste (titre dans le path)
+# View the items of a list (title in the path)
 curl -H "Authorization: Bearer $JWT" http://127.0.0.1:8080/v1/lists/courses/items
 ```
 
-> Sans serveur d'auth activé (défaut local), le serveur utilise l'intercepteur
-> dev (Phase 2) et accepte les appels non authentifiés. Avec `JWT_SIGNING_KEY`
-> ou `SUPABASE_JWT_SECRET` côté serveur, un `Authorization: Bearer <jwt>` valide
-> est requis (sinon 401).
+> Without an auth server enabled (local default), the server uses the dev
+> interceptor (Phase 2) and accepts unauthenticated calls. With
+> `JWT_SIGNING_KEY` or `SUPABASE_JWT_SECRET` on the server side, a valid
+> `Authorization: Bearer <jwt>` is required (otherwise 401).
 
 ---
 
-## 4. Volet B — régénérer le stub gateway officiel (`buf`)
+## 4. Part B — regenerate the official gateway stub (`buf`)
 
-Quand on veut le stub canonique `proto/todoList.pb.gw.pb.go` (généré par
-`protoc-gen-grpc-gateway`), il faut **`buf`** car l'annotation
-`import "google/api/annotations.proto"` **n'est pas vendorée** dans ce repo :
-`buf` la résout via la dépendance distante `buf.build/googleapis/googleapis`
-(déclarée dans `buf.yaml`).
+When you want the canonical stub `proto/todoList.pb.gw.pb.go` (generated by
+`protoc-gen-grpc-gateway`), you need **`buf`** because the annotation
+`import "google/api/annotations.proto"` is **not vendored** in this repo: `buf`
+resolves it via the remote dependency `buf.build/googleapis/googleapis`
+(declared in `buf.yaml`).
 
-### ⚠️ Important : `make proto-protoc` (plain protoc) ne fonctionne plus
+### ⚠️ Important: `make proto-protoc` (plain protoc) no longer works
 
-Tant que les annotations `google.api.http` et leur
-`import "google/api/annotations.proto"` sont présents dans
-`proto/todoList.proto`, la cible **legacy `make proto-protoc`** (plain `protoc`,
-go/go-grpc uniquement) **échoue** : `protoc` ne sait pas résoudre
-`google/api/annotations.proto` (absent du include path, non vendoré). Ce n'est
-donc **plus un repli viable**.
+As long as the `google.api.http` annotations and their
+`import "google/api/annotations.proto"` are present in `proto/todoList.proto`,
+the **legacy target `make proto-protoc`** (plain `protoc`, go/go-grpc only)
+**fails**: `protoc` cannot resolve `google/api/annotations.proto` (absent from
+the include path, not vendored). It is therefore **no longer a viable
+fallback**.
 
-La voie à utiliser est **`buf`** :
+The path to use is **`buf`**:
 
 ```sh
-# Prérequis (une fois) : installer buf + les plugins protoc-gen-*
+# Prerequisites (once): install buf + the protoc-gen-* plugins
 go install github.com/bufbuild/buf/cmd/buf@latest
 go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
 go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
 go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway@latest
 
-# Générer les stubs Go/gRPC + le stub gateway
+# Generate the Go/gRPC stubs + the gateway stub
 make proto              # = buf dep update && buf generate
-# ou, équivalent explicite pour la gateway :
+# or, the explicit equivalent for the gateway:
 make proto-gateway
 
-# La régénération introduit la dépendance grpc-gateway/v2 -> mettre à jour go.mod
+# Regeneration introduces the grpc-gateway/v2 dependency -> update go.mod
 go mod tidy
 ```
 
-> Pour réutiliser la cible legacy `proto-protoc` (sans buf), il faudrait soit
-> retirer les annotations + l'import du `.proto`, soit vendorer
-> `google/api/annotations.proto` et l'ajouter au include path de `protoc`.
-> Tant que ce n'est pas le cas, **utiliser `buf`**.
+> To reuse the legacy `proto-protoc` target (without buf), you would have to
+> either remove the annotations + the import from the `.proto`, or vendor
+> `google/api/annotations.proto` and add it to `protoc`'s include path. Until
+> that is done, **use `buf`**.
 
-Fichiers de config :
-- `buf.yaml` (v2) — module + dépendance `googleapis` + règles lint/breaking.
-- `buf.gen.yaml` (v2) — plugins `go`, `go-grpc`, `grpc-gateway` (out `source_relative`).
+Config files:
+- `buf.yaml` (v2) — module + `googleapis` dependency + lint/breaking rules.
+- `buf.gen.yaml` (v2) — `go`, `go-grpc`, `grpc-gateway` plugins (out `source_relative`).
 
-Après génération, un binaire serveur gateway officiel (basé sur
-`runtime.ServeMux` de grpc-gateway) pourrait remplacer le volet A — le contrat
-REST restant identique.
+After generation, an official gateway server binary (based on grpc-gateway's
+`runtime.ServeMux`) could replace part A — the REST contract remaining
+identical.
 
 ---
 
-## 5. Hors scope
+## 5. Out of scope
 
-- **Le front web lui-même** (HTML/JS/SPA) : hors v1.
-- La validation du JWT dans la gateway : elle ne fait que **relayer** le Bearer ;
-  la validation reste côté serveur gRPC (intercepteur Phase 3).
-- Tout changement du contrat ou de la sémantique des 7 RPC.
-- Le déploiement réel de la gateway (exposition publique, TLS entrant) : à
-  traiter dans `docs/deployment.md` au moment où le front web sera développé.
+- **The web front end itself** (HTML/JS/SPA): out of v1.
+- JWT validation in the gateway: it only **relays** the Bearer; validation
+  stays on the gRPC server side (Phase 3 interceptor).
+- Any change to the contract or the semantics of the 7 RPCs.
+- The actual deployment of the gateway (public exposure, inbound TLS): to be
+  addressed in `docs/deployment.md` when the web front end is developed.

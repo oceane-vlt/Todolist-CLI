@@ -12,7 +12,7 @@ import (
 const (
 	// EnvJWTSigningKey is the shared secret for the local/home auth mode. When
 	// set, the server validates HS256 tokens signed with this key. This is the
-	// "JWT signé localement" path the plan de-risks before Supabase.
+	// "locally signed JWT" path the plan de-risks before Supabase.
 	EnvJWTSigningKey = "JWT_SIGNING_KEY"
 
 	// EnvSupabaseJWTSecret is Supabase's legacy project JWT secret (HS256). When
@@ -81,7 +81,7 @@ func jwksURLFromEnv() string {
 // is Postgres, otherwise nil). It is only used when authentication is enabled.
 //
 // Keeping the unauthenticated dev fallback as the default is what preserves the
-// "le défaut local doit continuer de marcher" guarantee between phases.
+// "the local default must keep working" guarantee between phases.
 func AuthInterceptorFromEnv(devUserID string, provisioner UserProvisioner) (interceptor grpc.UnaryServerInterceptor, authEnabled bool) {
 	if secret := os.Getenv(EnvJWTSigningKey); secret != "" {
 		return AuthInterceptor(auth.NewHMACVerifier([]byte(secret)), provisioner), true
