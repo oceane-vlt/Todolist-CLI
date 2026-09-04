@@ -32,8 +32,8 @@ lists titles only and marks the items that carry a description.`,
 		// ambiguous: refuse rather than silently attaching it to an arbitrary one.
 		if description != "" && len(items) > 1 {
 			ui.Error("--description applies to a single item.")
-			ui.Info(fmt.Sprintf("Add them one at a time, or set the description afterwards with %s.",
-				ui.Command("todo update "+args[0])))
+			ui.Info(fmt.Sprintf("Add them one at a time, or add the descriptions afterwards: %s, then press e on an item.",
+				ui.Command("todo show "+args[0])))
 			os.Exit(1)
 		}
 

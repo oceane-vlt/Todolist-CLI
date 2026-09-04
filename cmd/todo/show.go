@@ -17,9 +17,10 @@ var showCmd = &cobra.Command{
 	Short: "Show the items of a todo list",
 	Long: `Show the items of a todo list.
 
-In a terminal this opens an interactive browser: move with the arrow keys and
-press → (or Enter) on an item to read its description. Items carrying a
-description are marked with a "▸".
+In a terminal this opens an interactive browser, which is where you work on a
+list: move with the arrow keys, press → (or Enter) to read an item's
+description, e to edit it, a to add one, x (or Space) to tick it, and ctrl+s to
+complete what you ticked. Items carrying a description are marked with a "▸".
 
 When the output is piped or redirected the command prints a static list instead,
 so it stays usable in scripts.
@@ -60,11 +61,14 @@ Usage:
 		// to the static rendering too — which is what prints the "all completed"
 		// message and the history.
 		pending, originalIndex := pendingItems(response.Items)
+		positions := &listPositions{fullLen: len(response.Items), toFull: originalIndex}
 		if !flagPlain && !flagHistory && !flagDetails && len(pending) > 0 && tui.IsInteractive() {
-			result, err := tui.Browse(pending, request.Title)
+			result, err := tui.Browse(pending, request.Title,
+				itemEditor(ctx, request.Title, positions),
+				itemAdder(ctx, request.Title, positions))
 			if err == nil {
 				if result.Confirmed {
-					completeItems(ctx, args, request.Title, result.Completed, originalIndex)
+					completeItems(ctx, args, request.Title, result.Completed, positions)
 				}
 				return
 			}
@@ -99,25 +103,97 @@ func pendingItems(items []*todo.Item) (pending []*todo.Item, originalIndex []int
 	return pending, originalIndex
 }
 
+// listPositions maps the browser's positions onto positions in the FULL list,
+// which is how the server addresses items.
+//
+// It is shared (and mutable) across the browser's callbacks because adding an
+// item changes the mapping: the new row lands at the end of the browser's list
+// and at the end of the full list, so the two grow together. Were each callback
+// given its own copy, an add followed by an edit or a completion would address
+// the wrong item — silently, and destructively.
+type listPositions struct {
+	// fullLen is the number of items in the full list, and therefore the index
+	// the next appended item will occupy.
+	fullLen int
+	// toFull maps a browser position to its index in the full list.
+	toFull []int32
+}
+
+// full resolves a browser position to its index in the full list.
+func (p *listPositions) full(position int) (int32, error) {
+	if position < 0 || position >= len(p.toFull) {
+		return 0, fmt.Errorf("item position %d is out of range", position)
+	}
+	return p.toFull[position], nil
+}
+
+// appended records that one item was added at the end of the full list, keeping
+// the mapping in step. It must be called only after the server accepted the add.
+func (p *listPositions) appended() {
+	p.toFull = append(p.toFull, int32(p.fullLen))
+	p.fullLen++
+}
+
+// itemAdder returns the callback the browser uses to append an item. The RPC is
+// UpdateTodoList, which appends — which is what makes the new item's index the
+// list's previous length, and what listPositions.appended relies on.
+func itemAdder(ctx context.Context, listTitle string, positions *listPositions) tui.ItemAdder {
+	return func(title, description string) error {
+		_, err := grpcClient.UpdateTodoList(ctx, &todo.UpdateTodoListRequest{
+			Title: listTitle,
+			Items: []*todo.Item{{Title: title, Description: description}},
+		})
+		if err != nil {
+			return err
+		}
+		positions.appended()
+		return nil
+	}
+}
+
+// itemEditor returns the callback the browser uses to save an edit. It is what
+// keeps libs/tui free of any transport concern: the view collects the edit, this
+// closure sends it.
+//
+// It translates the browser's position into the item's position in the full list
+// (same reason as completeItems) and forwards only the fields the browser
+// reports as changed, so field presence survives all the way to the server.
+func itemEditor(ctx context.Context, listTitle string, positions *listPositions) tui.ItemEditor {
+	return func(position int, newTitle, newDescription *string) error {
+		index, err := positions.full(position)
+		if err != nil {
+			return err
+		}
+		_, err = grpcClient.UpdateTodoListItem(ctx, &todo.UpdateTodoListItemRequest{
+			Title:          listTitle,
+			ItemIndex:      index,
+			NewTitle:       newTitle,
+			NewDescription: newDescription,
+		})
+		return err
+	}
+}
+
 // completeItems marks the browser's selection as completed, translating the
 // browser's positions back into positions in the full list.
 //
 // Completion is soft: the items are kept and flagged, not removed, and stay
 // visible under "todo show <list> -H".
-func completeItems(ctx context.Context, args []string, listTitle string, selected []int, originalIndex []int32) {
+func completeItems(ctx context.Context, args []string, listTitle string, selected []int, positions *listPositions) {
 	if len(selected) == 0 {
 		return
 	}
 
 	indexes := make([]int32, 0, len(selected))
 	for _, position := range selected {
-		if position < 0 || position >= len(originalIndex) {
+		index, err := positions.full(position)
+		if err != nil {
 			// Cannot happen — the browser only reports rows it was given — but
 			// completing a wrong item is bad enough to be worth the guard.
-			ui.Error(fmt.Sprintf("internal error: item position %d is out of range", position))
+			ui.Error(fmt.Sprintf("internal error: %v", err))
 			return
 		}
-		indexes = append(indexes, originalIndex[position])
+		indexes = append(indexes, index)
 	}
 
 	if _, err := grpcClient.DeleteTodoListItems(ctx, &todo.DeleteTodoListItemsRequest{

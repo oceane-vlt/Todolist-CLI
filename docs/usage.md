@@ -31,13 +31,12 @@ automatically — nothing else to configure. See [installation.md](installation.
 | `todo logout` | Delete locally stored credentials |
 | `todo list` | List all todo lists (shows non-completed item count) |
 | `todo create <name> [items...]` | Create a new todo list |
-| `todo show <name>` | Browse a list: read descriptions, tick items, complete them |
+| `todo show <name>` | Browse a list: read descriptions, edit, tick and complete items |
 | `todo show <name> --plain` | Static rendering (automatic when piped) |
 | `todo show <name> --details` | Static rendering with descriptions printed inline |
 | `todo show <name> -H` | Show full history (all items, including completed) |
 | `todo add <name> <items...>` | Add new items to an existing list |
 | `todo add <name> <item> -d "..."` | Add one item with a longer description |
-| `todo update <name>` | Edit an item's title and description (interactive) |
 | `todo delete <name>` | Delete an entire list (permanent) |
 | `todo migrate` | Import local `data.json` lists into the remote Postgres store |
 
@@ -123,9 +122,14 @@ read a list and complete items:
 | --- | --- |
 | `↑` `↓` (or `k` `j`) | move |
 | `→` (or `Enter`) | open the description · `←` folds it back |
+| `e` | edit the item's title and description |
+| `a` | add a new item |
 | `x` (or `Space`) | tick the item for completion |
 | `Ctrl+S` | complete every ticked item |
-| `q` | quit (asks first if anything is ticked) |
+| `q` (or `Esc`) | quit (asks first if anything is ticked) |
+
+On a narrow terminal the hint line drops the alternate keys (`→/enter`,
+`x/space`) before it would wrap — they keep working either way.
 
 Items that carry a description are marked with a `▸`, so you can tell at a
 glance which ones have more to show. Ticking is **local until you confirm**: a
@@ -134,6 +138,41 @@ pending asks before discarding them.
 
 Completion is *soft*: completed items are kept and flagged, not deleted, and
 remain visible under `todo show <list> -H`.
+
+Pressing `e` opens an editor **inside** the browser, and `a` opens the same form
+empty to create an item:
+
+```
+  Edit item
+
+  Title
+  Appeler le plombier
+
+  Description
+  Fuite sous l'évier de la cuisine.
+
+  À faire :
+  - demander un devis
+  - vérifier la garantie du joint
+
+  tab next field · ctrl+s save · esc cancel
+```
+
+Both fields are pre-filled, so this is an edit rather than a re-entry. `Tab`
+moves between them, `Ctrl+S` saves, `Esc` cancels. Saving returns you **to the
+list**, with your cursor, your scroll position and any pending ticks intact —
+you do not leave the browser. Clearing the description removes it, and a
+description may span several lines, blank lines included.
+
+Only the fields you actually changed are sent, so editing a title never wipes a
+description (and the other way round). `Cmd+S` does **not** work on macOS: a
+terminal never passes the Command key to the program it runs.
+
+A new item is appended at the end of the list, and the cursor moves onto it. A
+title is required; the description is optional.
+
+> The browser only opens when a list has at least one item left to do, so `a` is
+> not a way to fill an empty list — use `todo add` for that.
 
 The browser renders **inline**, where you typed the command: it does not clear
 the screen, your terminal history stays visible above it, and the list remains
@@ -188,58 +227,15 @@ todo add shopping "Call the plumber" -d "Leak under the kitchen sink. Get a quot
 
 Items are appended to the end of the list. Shows the updated list after adding.
 
+`todo add` is the quick path, and it is the only one that works in a script. You
+can also add from inside `todo show` by pressing `a`, which is handier when you
+are already looking at the list.
+
 An item has a **short title** and an optional **longer description**. The title
 is what every listing shows; the description is the detail you read on demand
 (see [Show a List](#show-a-list)). Because a description describes one item,
 `-d` only accepts a single item at a time — add them one by one, or set the
-description afterwards with `todo update`.
-
-### Update an Existing Item
-
-```bash
-todo update <list-name>
-```
-
-**Interactive command:** displays the non-completed items and asks for an
-index, then opens an editor on that item:
-
-```
-  Edit item
-
-  Title
-  Appeler le plombier
-
-  Description
-  Fuite sous l'évier de la cuisine.
-
-  À faire :
-  - demander un devis
-  - vérifier la garantie du joint
-
-  tab next field · ctrl+s save · esc cancel
-```
-
-Both fields are pre-filled with their current values, so this is an edit rather
-than a re-entry:
-
-| key | effect |
-| --- | --- |
-| `Ctrl+S` | save and close |
-| `Tab` | move between title and description |
-| `Enter` | in the title: go to the description · in the description: new line |
-| `Esc` | cancel, changing nothing |
-
-Clearing the description removes it. Note that `Cmd+S` does **not** work on
-macOS — a terminal never passes the Command key to the program it runs.
-
-The description may span **several lines**, blank lines included: the browser
-and `--details` both preserve the line breaks you type.
-
-Only the fields you actually changed are sent, so editing a title never wipes a
-description (and the other way round).
-
-`todo update` needs a real terminal. In a script, add the item with
-`todo add <list> "<title>" -d "<description>"` instead.
+description afterwards by pressing `e` on the item in `todo show`.
 
 ### Delete an Entire List
 

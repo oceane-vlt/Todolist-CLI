@@ -3,10 +3,12 @@
 This file tracks planned features and improvements for the todolist-cli project.
 
 > **Status (2026-09):** Items now have a title plus an optional multi-line
-> description, and `todo show` is an interactive browser (Bubble Tea) where you
-> read descriptions, tick items with `x` and complete them with `ctrl+s` — the
-> `complete` command was folded into it and removed. Completing is therefore
-> **interactive only**: there is no scripted way to complete an item any more.
+> description, and `todo show` is the interactive working view (Bubble Tea):
+> read descriptions, add an item with `a`, edit one with `e`, tick items with
+> `x`, complete them with `ctrl+s`. The `complete` and `update` commands were folded into it and
+> removed. Completing and editing are therefore **interactive only** — removing
+> `complete` did take away a scripted path (`update` was already terminal-only,
+> so nothing was lost there).
 >
 > **Status (2026-06):** Remote storage, authentication, and deployment are done.
 > The original "SQLite" plan was superseded by a remote PostgreSQL backend (Neon),
@@ -119,15 +121,17 @@ This file tracks planned features and improvements for the todolist-cli project.
 - [x] If the index doesn't exist → ask again to the user — no longer applicable: you tick a row with the cursor, so an invalid index cannot be typed
 - [ ] A non-interactive way to complete items (e.g. `todo show <list> --complete 2,5`) — dropped with the `complete` command; only add it back if a script needs it
 
-#### UPDATE
+#### UPDATE (now part of `todo show`, the `update` command was removed)
 - [x] Edit an item's title and description in one interactive form (Bubble Tea), replacing the promptui prompts that corrupted the display on long values
 - [x] Send only the fields that actually changed, so editing a title cannot wipe a description
-- [ ] Pick the item from the browser instead of typing its index
+- [x] Pick the item from the browser instead of typing its index — press `e` on the row; saving returns to the list with cursor, scroll and ticks intact
 
 #### ADD
 - [ ] If the user doesn't add the new items as arguments of the command → ask the user to add the elements they want → scan stdin → call updateItem with the scanned list
+- [x] Add an item from the browser (`a` in `todo show`, opens the empty form) — `todo add` is kept for the quick, scriptable path
+- [ ] The browser only opens when a list has pending items, so `a` cannot fill an empty (or fully completed) list
 - [x] Print the list once updated
-- [x] Enable create elements with description (`todo add <list> <item> -d "..."`, and `todo update` edits it)
+- [x] Enable create elements with description (`todo add <list> <item> -d "..."`, and `e` in `todo show` edits it)
 
 ## Testing
 - [x] Add table-driven tests for JSON parsing logic

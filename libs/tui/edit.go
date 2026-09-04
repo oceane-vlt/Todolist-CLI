@@ -18,13 +18,10 @@ import (
 // ScreenBuf also rejects "\n" outright, so it cannot represent a multi-line
 // value at all. A text area is the control long-form text actually needs.
 
-// EditResult is what the user did in the edit form. Saved is false when they
-// cancelled, in which case the other fields must be ignored.
-type EditResult struct {
-	Title       string
-	Description string
-	Saved       bool
-}
+// The form is a SUB-MODEL, not a program of its own: it never returns tea.Quit.
+// It raises `done` and lets the browser decide what happens next — which is what
+// allows saving an edit to land the user back in the list instead of dropping
+// them out of the application.
 
 // Field indices, in tab order.
 const (
@@ -46,7 +43,7 @@ const (
 // overflow:
 //
 //	1  leading blank line
-//	1  "Edit item"
+//	1  the heading ("Edit item" / "New item")
 //	1  blank line
 //	1  "Title" label
 //	1  the title input
@@ -83,10 +80,16 @@ const minFormHeight = compactChromeLines + 1
 const descriptionCharLimit = 2000
 
 type editModel struct {
+	// heading names what the form is for ("Edit item" / "New item"), because the
+	// same form serves both and the two must not be mistaken for each other.
+	heading    string
 	titleInput textinput.Model
 	descArea   textarea.Model
 	focus      int
 	saved      bool
+	// done reports that the user finished with the form; saved says whether that
+	// was a save or a cancel. The owner reads both and resets them.
+	done bool
 	// message carries a validation problem to show under the form.
 	message string
 	width   int
@@ -96,34 +99,7 @@ type editModel struct {
 	compact bool
 }
 
-// EditItem opens the interactive editor on one item's title and description,
-// blocking until the user saves or cancels.
-//
-// The caller must have checked IsInteractive: this needs a real terminal.
-func EditItem(title, description string) (EditResult, error) {
-	final, err := tea.NewProgram(newEditModel(title, description)).Run()
-	if err != nil {
-		return EditResult{}, err
-	}
-
-	m, ok := final.(editModel)
-	if !ok {
-		return EditResult{}, fmt.Errorf("tui: unexpected final model %T", final)
-	}
-	if !m.saved {
-		return EditResult{}, nil
-	}
-
-	return EditResult{
-		Title: strings.TrimSpace(m.titleInput.Value()),
-		// TrimSpace also drops the leading/trailing blank lines a multi-line edit
-		// tends to leave behind, while keeping the blank lines inside the text.
-		Description: strings.TrimSpace(m.descArea.Value()),
-		Saved:       true,
-	}, nil
-}
-
-func newEditModel(title, description string) editModel {
+func newEditModel(heading, title, description string) editModel {
 	ti := textinput.New()
 	ti.SetValue(title)
 	ti.Prompt = ""
@@ -139,6 +115,7 @@ func newEditModel(title, description string) editModel {
 	ta.Blur()
 
 	m := editModel{
+		heading:    heading,
 		titleInput: ti,
 		descArea:   ta,
 		focus:      fieldTitle,
@@ -149,9 +126,9 @@ func newEditModel(title, description string) editModel {
 	return m
 }
 
-func (m editModel) Init() tea.Cmd { return textinput.Blink }
-
-func (m editModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+// update advances the form. It returns a concrete editModel rather than a
+// tea.Model so the browser can embed it without casting on every keystroke.
+func (m editModel) update(msg tea.Msg) (editModel, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
@@ -162,18 +139,21 @@ func (m editModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		// These are handled before the focused component sees the key, so the
 		// text area cannot swallow Esc as "stop selecting" or Tab as an indent.
+		//
+		// Ctrl+C is absent on purpose: the browser intercepts it globally, so an
+		// interrupt leaves the application rather than merely closing the form.
 		switch msg.String() {
-		case "esc", "ctrl+c":
-			m.saved = false
-			return m, tea.Quit
+		case "esc":
+			m.done, m.saved = true, false
+			return m, nil
 
 		case "ctrl+s":
 			if strings.TrimSpace(m.titleInput.Value()) == "" {
 				m.message = "A title is required."
 				return m, nil
 			}
-			m.saved = true
-			return m, tea.Quit
+			m.done, m.saved = true, true
+			return m, nil
 
 		case "tab":
 			return m.focusField(m.focus + 1), nil
@@ -200,6 +180,13 @@ func (m editModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.descArea, cmd = m.descArea.Update(msg)
 	}
 	return m, cmd
+}
+
+// values returns the edited title and description, trimmed. TrimSpace also drops
+// the leading/trailing blank lines a multi-line edit tends to leave behind,
+// while keeping the blank lines inside the text.
+func (m editModel) values() (title, description string) {
+	return strings.TrimSpace(m.titleInput.Value()), strings.TrimSpace(m.descArea.Value())
 }
 
 // focusField moves the focus, wrapping around, and keeps exactly one component
@@ -259,7 +246,7 @@ func (m editModel) View() string {
 	var b strings.Builder
 
 	if !m.compact {
-		fmt.Fprintf(&b, "\n%s%sEdit item%s\n\n", rowIndent, ui.Bold, ui.ColorReset)
+		fmt.Fprintf(&b, "\n%s%s%s%s\n\n", rowIndent, ui.Bold, m.heading, ui.ColorReset)
 	}
 
 	b.WriteString(m.label("Title", fieldTitle))

@@ -13,6 +13,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/oceane-vlt/todolist/libs/ui"
 	todo "github.com/oceane-vlt/todolist/proto"
@@ -117,13 +118,76 @@ type model struct {
 	// discardPrompt is set when the user asked to quit while marks were pending,
 	// turning the next quit into a confirmation instead of a silent loss.
 	discardPrompt bool
-	// message is a transient line shown in place of the key hints.
-	message string
-	width   int
-	height  int
+	// message is a transient line shown in place of the key hints, and
+	// messageIsError says how to colour it. Reporting a success in the error
+	// style is worse than not reporting it at all: it reads as a failure.
+	message        string
+	messageIsError bool
+	// mode is modeList or modeEdit.
+	mode int
+	// edit is the form, live only while mode is modeEdit.
+	edit editModel
+	// editing is the item index the open form belongs to.
+	editing int
+	// editor applies a saved edit and adder appends a new item. When nil, the
+	// matching key says so rather than doing nothing, so a caller that cannot
+	// write is simply given a read-only browser.
+	editor ItemEditor
+	adder  ItemAdder
+	width  int
+	height int
 	// offset is the index of the first item rendered, moved just enough to keep
 	// the cursor on screen.
 	offset int
+}
+
+// ItemEditor applies an edit to one item, and is how the browser changes data
+// without knowing anything about gRPC: the caller owns the transport.
+//
+// index is a position in the slice given to Browse. newTitle and newDescription
+// are nil for fields the user did not change, mirroring the proto's field
+// presence, so editing a description never rewrites the title.
+type ItemEditor func(index int, newTitle, newDescription *string) error
+
+// ItemAdder appends a new item to the list, and like ItemEditor keeps the
+// transport out of this package.
+//
+// The caller must append the item at the END of the underlying list, because
+// that is where the browser shows it and how it keeps its index mapping in step.
+type ItemAdder func(title, description string) error
+
+// Modes of the browser. Editing happens INSIDE the browser rather than in a
+// program of its own, which is what lets a saved edit return to the list with
+// the cursor, the scroll position and the pending ticks all intact.
+const (
+	modeList = iota
+	modeEdit
+	modeAdd
+)
+
+// Headings of the shared form, so an edit is never mistaken for a creation.
+const (
+	headingEdit = "Edit item"
+	headingAdd  = "New item"
+)
+
+// editAppliedMsg carries the outcome of an ItemEditor call back into the event
+// loop. The call runs in a tea.Cmd rather than inline in Update, because it is a
+// network round-trip: doing it inline would freeze the UI until the server
+// answered.
+type editAppliedMsg struct {
+	index       int
+	title       string
+	description string
+	err         error
+}
+
+// itemAddedMsg carries the outcome of an ItemAdder call back into the event
+// loop, for the same reason editAppliedMsg does.
+type itemAddedMsg struct {
+	title       string
+	description string
+	err         error
 }
 
 // BrowseResult is what the user did in the browser.
@@ -145,8 +209,10 @@ type BrowseResult struct {
 // It returns an error when the terminal program cannot run; the caller is
 // expected to fall back to the static rendering in that case rather than leave
 // the user with nothing.
-func Browse(items []*todo.Item, listTitle string) (BrowseResult, error) {
+func Browse(items []*todo.Item, listTitle string, editor ItemEditor, adder ItemAdder) (BrowseResult, error) {
 	m := newBrowseModel(items, listTitle)
+	m.editor = editor
+	m.adder = adder
 	// Deliberately NOT WithAltScreen: the browser renders inline, right where the
 	// command was typed, so the surrounding terminal history stays visible and the
 	// last frame remains on screen after quitting — the list behaves like command
@@ -168,6 +234,122 @@ func Browse(items []*todo.Item, listTitle string) (BrowseResult, error) {
 		return BrowseResult{}, nil
 	}
 	return BrowseResult{Completed: done.markedIndices(), Confirmed: true}, nil
+}
+
+// openForm puts the shared form on screen, sized to the current terminal.
+func (m model) openForm(mode int, heading, title, description string) (tea.Model, tea.Cmd) {
+	m.mode = mode
+	m.edit = newEditModel(heading, title, description)
+	m.edit.width, m.edit.height = m.width, m.height
+	m.edit.layout()
+	// Blink starts the cursor animation in the form's focused field.
+	return m, textinput.Blink
+}
+
+// updateEdit forwards a message to the open form and reacts when it finishes:
+// a save fires the ItemEditor, a cancel simply returns to the list. Either way
+// the browser stays open — that is the whole point of embedding the form.
+func (m model) updateEdit(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var cmd tea.Cmd
+	m.edit, cmd = m.edit.update(msg)
+	if !m.edit.done {
+		return m, cmd
+	}
+
+	mode := m.mode
+	index := m.editing
+	saved := m.edit.saved
+	title, description := m.edit.values()
+
+	m.mode = modeList
+	m.edit = editModel{}
+
+	if !saved {
+		return m, nil
+	}
+	if mode == modeAdd {
+		return m, m.applyAdd(title, description)
+	}
+	return m, m.applyEdit(index, title, description)
+}
+
+// applyAdd builds the command that appends the item off the event loop.
+func (m model) applyAdd(title, description string) tea.Cmd {
+	adder := m.adder
+	return func() tea.Msg {
+		return itemAddedMsg{
+			title:       title,
+			description: description,
+			err:         adder(title, description),
+		}
+	}
+}
+
+// handleItemAdded reflects the server's answer: on success the row appears at the
+// end of the list, with the cursor moved onto it so the user sees what they just
+// created; on failure nothing is added and the reason is surfaced.
+func (m model) handleItemAdded(added itemAddedMsg) model {
+	if added.err != nil {
+		m.message, m.messageIsError = fmt.Sprintf("Could not add the item: %v", added.err), true
+		return m
+	}
+
+	m.items = append(m.items, &todo.Item{Title: added.title, Description: added.description})
+	m.cursor = len(m.items) - 1
+	m.clampOffset()
+	m.message, m.messageIsError = "Item added.", false
+	return m
+}
+
+// applyEdit builds the command that calls the ItemEditor off the event loop,
+// sending only the fields that actually changed.
+func (m model) applyEdit(index int, title, description string) tea.Cmd {
+	item := m.items[index]
+
+	var newTitle, newDescription *string
+	if title != item.Title {
+		newTitle = &title
+	}
+	if description != item.Description {
+		newDescription = &description
+	}
+	if newTitle == nil && newDescription == nil {
+		// Nothing changed: no round-trip, and no misleading "saved" message.
+		return nil
+	}
+
+	editor := m.editor
+	return func() tea.Msg {
+		return editAppliedMsg{
+			index:       index,
+			title:       title,
+			description: description,
+			err:         editor(index, newTitle, newDescription),
+		}
+	}
+}
+
+// handleEditApplied reflects the server's answer in the list. On success the
+// item is updated in place so the row shows the new text immediately; on failure
+// the list is left untouched and the reason is surfaced, never swallowed.
+func (m model) handleEditApplied(applied editAppliedMsg) model {
+	if applied.err != nil {
+		m.message, m.messageIsError = fmt.Sprintf("Could not save the item: %v", applied.err), true
+		return m
+	}
+
+	item := m.items[applied.index]
+	item.Title = applied.title
+	item.Description = applied.description
+
+	// A description that just became empty cannot stay unfolded.
+	if strings.TrimSpace(item.Description) == "" {
+		delete(m.expanded, applied.index)
+	}
+
+	m.message, m.messageIsError = "Item saved.", false
+	m.clampOffset()
+	return m
 }
 
 // markedIndices returns the ticked rows in ascending order, so the caller gets a
@@ -197,24 +379,43 @@ func newBrowseModel(items []*todo.Item, listTitle string) model {
 func (m model) Init() tea.Cmd { return nil }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
-	case tea.WindowSizeMsg:
-		m.width = msg.Width
-		m.height = msg.Height
-		m.clampOffset()
-		return m, nil
+	// Ctrl+C is an interrupt, not a decision: it always leaves immediately,
+	// whatever mode we are in and whatever is pending.
+	if key, ok := msg.(tea.KeyMsg); ok && key.String() == "ctrl+c" {
+		return m, tea.Quit
+	}
 
-	case tea.KeyMsg:
-		// Ctrl+C is an interrupt, not a decision: it always leaves immediately,
-		// discarding marks. Only q/esc get the "are you sure" treatment below.
-		if msg.String() == "ctrl+c" {
-			return m, tea.Quit
+	// The window size has to reach the form too, or an edit opened before a
+	// resize would keep laying itself out for the old terminal.
+	if size, ok := msg.(tea.WindowSizeMsg); ok {
+		m.width = size.Width
+		m.height = size.Height
+		m.clampOffset()
+		if m.mode != modeList {
+			m.edit, _ = m.edit.update(msg)
 		}
+		return m, nil
+	}
+
+	if applied, ok := msg.(editAppliedMsg); ok {
+		return m.handleEditApplied(applied), nil
+	}
+
+	if added, ok := msg.(itemAddedMsg); ok {
+		return m.handleItemAdded(added), nil
+	}
+
+	if m.mode != modeList {
+		return m.updateEdit(msg)
+	}
+
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
 
 		// Any keypress clears a transient notice; the two branches that want one
 		// set it again below.
 		wasPrompting := m.discardPrompt
-		m.message = ""
+		m.message, m.messageIsError = "", false
 		m.discardPrompt = false
 
 		switch msg.String() {
@@ -228,6 +429,25 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, tea.Quit
 
+		case "e":
+			// A caller without an editor gets a read-only browser rather than a key
+			// that silently does nothing.
+			if m.editor == nil {
+				m.message, m.messageIsError = "Editing is not available here.", true
+				return m, nil
+			}
+			item := m.items[m.cursor]
+			m.editing = m.cursor
+			return m.openForm(modeEdit, headingEdit, item.Title, item.Description)
+
+		case "a":
+			if m.adder == nil {
+				m.message, m.messageIsError = "Adding is not available here.", true
+				return m, nil
+			}
+			// An empty form: the user fills in both fields themselves.
+			return m.openForm(modeAdd, headingAdd, "", "")
+
 		case "x", " ":
 			if m.marked[m.cursor] {
 				delete(m.marked, m.cursor)
@@ -237,7 +457,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case "ctrl+s":
 			if len(m.marked) == 0 {
-				m.message = "Nothing marked — press x to tick an item."
+				m.message, m.messageIsError = "Nothing marked — press x to tick an item.", true
 				return m, nil
 			}
 			m.confirmed = true
@@ -293,6 +513,10 @@ func (m model) hasDescription(i int) bool {
 }
 
 func (m model) View() string {
+	if m.mode != modeList {
+		return m.edit.View()
+	}
+
 	var b strings.Builder
 
 	// The title is clamped rather than allowed to wrap: a second physical row
@@ -384,12 +608,29 @@ func (m model) renderItem(i int) string {
 	return b.String()
 }
 
-// Footer texts. They are clamped to the terminal width before being printed,
-// because a wrapped hint would occupy two rows where chromeLines budgets one.
-const (
-	browseHint       = "↑↓ move · → open · x mark · ctrl+s complete · q/esc quit"
-	browseHintNarrow = "↑↓ move · x mark · ctrl+s done · q/esc quit"
-)
+// browseHints are the key hints, widest first. The footer prints the first one
+// that fits the terminal.
+//
+// Spelling out the alternate keys ("→/enter", "x/space") costs width, so they
+// are the first thing given up as the terminal narrows — a shorter hint that
+// still reads is better than a complete one cut mid-word. Truncation remains the
+// last resort, for a terminal too narrow even for the shortest form.
+var browseHints = []string{
+	"↑↓ move · →/enter open · e edit · a add · x/space mark · ctrl+s complete · q/esc quit",
+	"↑↓ move · → open · e edit · a add · x mark · ctrl+s complete · q/esc quit",
+	"↑↓ move · e edit · a add · x mark · ctrl+s done · q/esc quit",
+	"e edit · a add · x mark · ctrl+s done",
+}
+
+// hintFor returns the widest hint that fits in width cells.
+func hintFor(width int) string {
+	for _, hint := range browseHints {
+		if runeLen(hint) <= width {
+			return hint
+		}
+	}
+	return browseHints[len(browseHints)-1]
+}
 
 func (m model) footer() string {
 	width := m.width - len(rowIndent)
@@ -401,16 +642,14 @@ func (m model) footer() string {
 		return fmt.Sprintf("\n%s%s%s%s\n", rowIndent, ui.BoldRed, clampLine(text, width), ui.ColorReset)
 	}
 	if m.message != "" {
-		return fmt.Sprintf("\n%s%s%s%s\n", rowIndent, ui.BoldRed, clampLine(m.message, width), ui.ColorReset)
+		style := ui.BoldGreen
+		if m.messageIsError {
+			style = ui.BoldRed
+		}
+		return fmt.Sprintf("\n%s%s%s%s\n", rowIndent, style, clampLine(m.message, width), ui.ColorReset)
 	}
 
-	// Prefer the full hint, but drop to the short one before resorting to
-	// truncation: a hint cut mid-word teaches the user nothing.
-	hint := browseHint
-	if runeLen(hint) > width {
-		hint = browseHintNarrow
-	}
-	return fmt.Sprintf("\n%s%s%s%s\n", rowIndent, ui.Dim, clampLine(hint, width), ui.ColorReset)
+	return fmt.Sprintf("\n%s%s%s%s\n", rowIndent, ui.Dim, clampLine(hintFor(width), width), ui.ColorReset)
 }
 
 // clampLine truncates s to width cells, marking the cut with an ellipsis. It is
