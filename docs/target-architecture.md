@@ -146,7 +146,15 @@ Flow of a business call (e.g. `GetTodoLists`):
 
 ### 4.2 `proto` contract — what changes and what does not
 
-- The **7 existing business RPCs keep unchanged signatures** (`CreateTodoList`, `GetTodoLists`, `ShowTodoListItems`, `DeleteTodoList`, `DeleteTodoListItems`, `UpdateTodoList`, `UpdateTodoListItem`). They continue to index by `title` on the client side; the server enforces the logical key **`(user_id, title)`**.
+- The **7 business RPCs keep their names and their shape** (`CreateTodoList`, `GetTodoLists`, `ShowTodoListItems`, `DeleteTodoList`, `DeleteTodoListItems`, `UpdateTodoList`, `UpdateTodoListItem`). They continue to index by `title` on the client side; the server enforces the logical key **`(user_id, title)`**.
+- **Amendment (item descriptions).** `UpdateTodoListItemRequest` has since gained
+  `new_description`, and its `new_title` / `new_description` fields are proto3
+  **optional**: an absent field leaves the current value untouched, while a field
+  set to `""` clears it. This is what makes `PATCH /v1/lists/{title}/items` a
+  genuine partial update — editing a description must not wipe the title. The
+  change is wire-compatible (same field numbers, presence only adds a synthetic
+  oneof), so it does not break the "unchanged contract" guarantee this section
+  was written to express.
 - **No `user_id` field added** to the messages (see 4.1).
 - **Option (future)**: a separate `AuthService` if we do NOT use managed auth:
 

@@ -2,6 +2,12 @@
 
 This file tracks planned features and improvements for the todolist-cli project.
 
+> **Status (2026-09):** Items now have a title plus an optional multi-line
+> description, and `todo show` is an interactive browser (Bubble Tea) where you
+> read descriptions, tick items with `x` and complete them with `ctrl+s` — the
+> `complete` command was folded into it and removed. Completing is therefore
+> **interactive only**: there is no scripted way to complete an item any more.
+>
 > **Status (2026-06):** Remote storage, authentication, and deployment are done.
 > The original "SQLite" plan was superseded by a remote PostgreSQL backend (Neon),
 > with Supabase/JWT authentication, TLS, multi-user isolation by `user_id`, a
@@ -79,6 +85,9 @@ This file tracks planned features and improvements for the todolist-cli project.
 - [x] Improve overall display (colors, emoji, etc)
 - [x] Improve errors message for all CRUD methods
 - [ ] Having suggestion when we start typing commands
+- [x] Commands declare their arguments, so `--help` and usage errors show them (`todo add <list> <item> [item...]`)
+- [x] A usage error exits non-zero and prints the error once (it used to print twice and exit 0)
+- [x] `todo` with no argument shows the help instead of nothing
 
 #### LIST
 - [x] The number of elements displayed should be the non completed one
@@ -91,6 +100,9 @@ This file tracks planned features and improvements for the todolist-cli project.
 #### SHOW
 - [ ] *Show* command with no arguments should display existing todo lists and ask user to enter the list they want to view
 - [x] Add a verbose option to display only the title or full details (interactive browser + `--details`)
+- [x] Interactive browser: arrow-key navigation, fold/unfold descriptions, `▸` marks the items that have one
+- [x] Degrade to static output when stdout is not a terminal, so pipes and scripts keep working (`--plain` forces it)
+- [ ] The `-v/--verbose` flag is declared but unused — either implement it or remove it
 - [x] We can search with case-insensitive (make sur there is no issue when deleting, creating, etc)
 - [x] Command run with non existing list should display an error
 - [x] Only show the 7 first completed items (shows first 7, use -H for all)
@@ -102,9 +114,15 @@ This file tracks planned features and improvements for the todolist-cli project.
 - [ ] Delete without the title → Display the list of todo lists
 - [ ] Ask for conformation before deleting
 
-#### COMPLETE
-- [x] Show the updated list once the items have been marked complete (the browser updates in place; `complete` was folded into `todo show`)
-- [x] If the index doesn't exist → ask again to the user
+#### COMPLETE (now part of `todo show`, the `complete` command was removed)
+- [x] Show the updated list once the items have been marked complete — the browser shows the ticks in place, and confirms how many were completed
+- [x] If the index doesn't exist → ask again to the user — no longer applicable: you tick a row with the cursor, so an invalid index cannot be typed
+- [ ] A non-interactive way to complete items (e.g. `todo show <list> --complete 2,5`) — dropped with the `complete` command; only add it back if a script needs it
+
+#### UPDATE
+- [x] Edit an item's title and description in one interactive form (Bubble Tea), replacing the promptui prompts that corrupted the display on long values
+- [x] Send only the fields that actually changed, so editing a title cannot wipe a description
+- [ ] Pick the item from the browser instead of typing its index
 
 #### ADD
 - [ ] If the user doesn't add the new items as arguments of the command → ask the user to add the elements they want → scan stdin → call updateItem with the scanned list
@@ -115,7 +133,8 @@ This file tracks planned features and improvements for the todolist-cli project.
 - [x] Add table-driven tests for JSON parsing logic
 - [x] Test parseTodoListNames function with multiple scenarios
 - [ ] Test gRPC methods individually with mock data
-- [ ] Test CLI end-to-end with the running server
+- [ ] Test CLI end-to-end with the running server (done manually against a local server; not automated)
+- [x] Unit tests for the interactive views: wrapping, scrolling, marking, quit guard, and the invariant that a rendered frame never exceeds the terminal
 - [ ] Add integration tests
 - [ ] Validate behavior on reboot with launchd active
 
@@ -132,8 +151,8 @@ This file tracks planned features and improvements for the todolist-cli project.
 - [x] Add optional auth, TLS, or multi-user features — **done**: Supabase/JWT auth, TLS, multi-user isolation by `user_id`
 - [x] Remote deployment (Fly.io) + gRPC-Gateway REST endpoint + `todo migrate` to import local `data.json`
 - [ ] Support for recurring tasks
-- [ ] Due dates and reminders
-- [ ] Task priorities
+- [ ] Due dates and reminders — the storage seam already takes an `ItemUpdate` struct of optional fields, so this is a new field rather than a new signature
+- [ ] Task priorities — same as above
 - [ ] Tags and filtering
 - [ ] Export/import functionality (CSV, JSON)
 - [ ] Web interface

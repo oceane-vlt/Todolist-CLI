@@ -33,6 +33,11 @@ annotations in `proto/todoList.proto`):
 | `UpdateTodoListItem` | `PATCH /v1/lists/{title}/items` | `*` | from the path |
 | `DeleteTodoListItems` | `DELETE /v1/lists/{title}/items` | `*` (indexes) | from the path |
 
+> `PATCH /v1/lists/{title}/items` is a **true partial update**: `new_title` and
+> `new_description` carry proto3 field presence, so a body omitting one of
+> them leaves that field untouched rather than blanking it. Sending `""`
+> clears it explicitly.
+
 For routes with `{title}`, the **path value overrides** any `title` present in
 the body (same semantics on both sides).
 
