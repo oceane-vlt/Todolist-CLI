@@ -11,11 +11,12 @@ See [Self-hosting](#self-hosting-sync-across-machines-optional). The project doe
 
 ## Features
 
-- 📝 Create and manage multiple todo lists; add, update, and delete items
+- 📝 Create and manage multiple todo lists; add and delete items
 - 🗒️ Each item has a short **title** and an optional longer **description**,
   read on demand in an interactive browser (arrow keys, `→` to unfold)
-- ✅ Complete items from the browser — tick them with `x`, confirm with `Ctrl+S`;
-  *soft-completion*, so they are kept for history (view them with `todo show <name> -H`)
+- ✅ Work from the browser — `a` to add, `e` to edit in place, `x` to tick,
+  `Ctrl+S` to complete; *soft-completion*, so completed items are kept for
+  history (view them with `todo show <name> -H`)
 - 💾 **Local by default** — data in a local JSON file, no account, works offline
 - 🔄 **Optional self-hosted sync** — run your own server backed by PostgreSQL to use
   the same lists across machines
@@ -45,7 +46,7 @@ todo list
 todo show shopping
 todo add shopping "Buy bread"
 todo add shopping "Call the plumber" -d "Leak under the kitchen sink"
-todo show shopping          # browse: x to tick, ctrl+s to complete
+todo show shopping          # browse: a to add, e to edit, x to tick, ctrl+s to complete
 todo delete shopping
 
 make stop       # stop the local server when done
@@ -88,12 +89,11 @@ All the exact commands and environment variables are in
 ```bash
 todo list                                   # list all your todo lists
 todo create shopping "Buy milk" "Buy eggs"  # create a list (optionally with items)
-todo show shopping                          # browse: read descriptions, tick with x, complete with ctrl+s
+todo show shopping                          # browse: add (a), edit (e), tick (x), complete (ctrl+s)
 todo show shopping --details                # static output, descriptions inline
 todo show shopping -H                       # show full history (incl. completed)
 todo add shopping "Buy cheese"              # add items to a list
 todo add shopping "Call plumber" -d "Leak under the sink"   # add one item with a description
-todo update shopping                        # edit an item's title and description (interactive)
 todo delete shopping                        # delete an entire list
 ```
 
