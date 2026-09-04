@@ -1,4 +1,4 @@
-.PHONY: help install build clean test test-pg proto proto-gateway proto-protoc run-server run-cli dev install-service uninstall-service service-status service-logs db-up db-down migrate migrate-data tls-cert docker-build deploy
+.PHONY: help install build clean test test-pg local-cli proto proto-gateway proto-protoc run-server run-cli dev install-service uninstall-service service-status service-logs db-up db-down migrate migrate-data tls-cert docker-build deploy
 
 # Variables
 BINARY_NAME_CLI=todo
@@ -117,6 +117,9 @@ run-server: ## Run the server (foreground)
 
 run-cli: ## Run the CLI (usage: make run-cli ARGS="list")
 	@go run ./cmd/todo $(ARGS)
+
+local-cli: ## Run the CLI against the LOCAL server, ignoring a remote endpoint set in your shell (usage: make local-cli ARGS="show mylist")
+	@env -u TODO_TLS -u TODO_TLS_CA_FILE TODO_SERVER_ENDPOINT=127.0.0.1:50051 go run ./cmd/todo $(ARGS)
 
 dev: ## Install and restart server
 	@echo "Installing and restarting server..."

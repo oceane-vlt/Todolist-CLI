@@ -147,7 +147,7 @@ todo login  --email you@example.com
 
 # Use the CLI — data is stored remotely, scoped to your account
 todo create test "First item" "Second item"
-todo show test
+todo show test --plain           # static output; drop --plain for the interactive browser
 todo list
 
 # If you already had local data.json lists, import them once into the remote store:

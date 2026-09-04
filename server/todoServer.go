@@ -95,7 +95,12 @@ func (s *TodoListServer) UpdateTodoList(ctx context.Context, request *todo.Updat
 func (s *TodoListServer) UpdateTodoListItem(ctx context.Context, request *todo.UpdateTodoListItemRequest) (*todo.UpdateTodoListItemResponse, error) {
 	fmt.Println("UpdateTodoListItem called")
 
-	err := s.store.UpdateTodoListItemData(ctx, request.Title, request.ItemIndex, request.NewTitle)
+	// Only the fields actually present in the request are forwarded, so a caller
+	// editing one field never overwrites the other (proto3 field presence).
+	err := s.store.UpdateTodoListItemData(ctx, request.Title, request.ItemIndex, storage.ItemUpdate{
+		Title:       request.NewTitle,
+		Description: request.NewDescription,
+	})
 	if err != nil {
 		return nil, err
 	}

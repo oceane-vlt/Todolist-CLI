@@ -3,15 +3,18 @@ package storage
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 
 	todo "github.com/oceane-vlt/todolist/proto"
 )
 
+// updateData appends newItems to listToUpdate. An appended item carries its
+// title and its description; the remaining fields keep their zero value until
+// the CLI can set them. PgStore.UpdateTodoListData mirrors this exactly.
 func updateData(listToUpdate []TodoItem, newItems []*todo.Item) ([]TodoItem, error) {
 	for _, item := range newItems {
 		todoItem := TodoItem{
-			Title: item.Title,
+			Title:       item.Title,
+			Description: item.Description,
 		}
 		listToUpdate = append(listToUpdate, todoItem)
 	}
@@ -21,7 +24,7 @@ func updateData(listToUpdate []TodoItem, newItems []*todo.Item) ([]TodoItem, err
 func UpdateTodoListData(dataPath, title string, newItems []*todo.Item) error {
 	data, err := ReadTodoData(dataPath)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	key := findListKey(data, title)

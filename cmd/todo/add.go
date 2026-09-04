@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-
 	"os"
 
 	"github.com/oceane-vlt/todolist/libs/errors"
@@ -13,20 +12,36 @@ import (
 )
 
 var addCmd = &cobra.Command{
-	Use:   "add",
+	Use:   "add <list> <item> [item...]",
 	Short: "add items to a todo list",
-	Long: `Update a todo list.
+	Long: `Add items to a todo list.
 	Usage:
-   - Add items to the list: todo add mylist "item1" "My item2" "my last item3"`,
+   - Add items to the list: todo add mylist "item1" "My item2" "my last item3"
+   - Add one item with a description: todo add mylist "Call the plumber" -d "Leak under the kitchen sink"
+
+The description is the long form of an item; the title stays short. 'todo show'
+lists titles only and marks the items that carry a description.`,
 	Args: cobra.MinimumNArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx := context.Background()
 
+		description, _ := cmd.Flags().GetString("description")
+
 		items := args[1:]
+		// A description describes ONE item, so pairing it with several titles is
+		// ambiguous: refuse rather than silently attaching it to an arbitrary one.
+		if description != "" && len(items) > 1 {
+			ui.Error("--description applies to a single item.")
+			ui.Info(fmt.Sprintf("Add them one at a time, or set the description afterwards with %s.",
+				ui.Command("todo update "+args[0])))
+			os.Exit(1)
+		}
+
 		todoItems := []*todo.Item{}
 		for _, itemTitle := range items {
 			todoItem := &todo.Item{
-				Title: itemTitle,
+				Title:       itemTitle,
+				Description: description,
 			}
 			todoItems = append(todoItems, todoItem)
 		}
@@ -58,11 +73,12 @@ var addCmd = &cobra.Command{
 			errors.Showerrors(err, args)
 			os.Exit(1)
 		}
-		ui.CompleteUi(response.Items, request.Title)
+		ui.PendingList(response.Items)
 		fmt.Println()
 	},
 }
 
 func init() {
+	addCmd.Flags().StringP("description", "d", "", "Longer description for the item (single item only)")
 	rootCmd.AddCommand(addCmd)
 }

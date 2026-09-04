@@ -168,7 +168,7 @@ func TestPgStoreParity(t *testing.T) {
 
 	// 5. Rename an item.
 	run(t, "rename", func(s Store) result {
-		return result{err: s.UpdateTodoListItemData(ctx, "work", 0, "buy oat milk")}
+		return result{err: s.UpdateTodoListItemData(ctx, "work", 0, titleUpdate("buy oat milk"))}
 	})
 	jsShow, pgShow = run(t, "show after rename", func(s Store) result {
 		items, err := s.ShowTodoListItems(ctx, "work")
@@ -176,6 +176,25 @@ func TestPgStoreParity(t *testing.T) {
 	})
 	if !itemsEqual(jsShow.items, pgShow.items) {
 		t.Fatalf("rename parity mismatch:\njson=%v\npg=%v", jsShow.items, pgShow.items)
+	}
+
+	// 5b. Partial edit: setting only the description must leave the title alone,
+	// identically on both backends (itemsEqual compares every field).
+	run(t, "set description", func(s Store) result {
+		return result{err: s.UpdateTodoListItemData(ctx, "work", 0, descriptionUpdate("the oat one, not soy"))}
+	})
+	jsShow, pgShow = run(t, "show after description", func(s Store) result {
+		items, err := s.ShowTodoListItems(ctx, "work")
+		return result{items: items, err: err}
+	})
+	if !itemsEqual(jsShow.items, pgShow.items) {
+		t.Fatalf("description parity mismatch:\njson=%v\npg=%v", jsShow.items, pgShow.items)
+	}
+	if pgShow.items[0].Title != "buy oat milk" {
+		t.Fatalf("description-only update clobbered the title: %q", pgShow.items[0].Title)
+	}
+	if pgShow.items[0].Description != "the oat one, not soy" {
+		t.Fatalf("description not written: %q", pgShow.items[0].Description)
 	}
 
 	// 6. Delete (mark completed) item 1, then check sizes (non-completed count).
@@ -324,10 +343,10 @@ func TestPgStoreOutOfRangeIndex(t *testing.T) {
 	}
 
 	// Unknown list / out-of-range rename are silent no-ops (return nil).
-	if err := pg.UpdateTodoListItemData(ctx, "ghost", 0, "x"); err != nil {
+	if err := pg.UpdateTodoListItemData(ctx, "ghost", 0, titleUpdate("x")); err != nil {
 		t.Fatalf("rename unknown list should be no-op, got %v", err)
 	}
-	if err := pg.UpdateTodoListItemData(ctx, "work", 99, "x"); err != nil {
+	if err := pg.UpdateTodoListItemData(ctx, "work", 99, titleUpdate("x")); err != nil {
 		t.Fatalf("rename out-of-range should be no-op, got %v", err)
 	}
 

@@ -298,10 +298,11 @@ func (s *PgStore) UpdateTodoListData(ctx context.Context, title string, newItems
 		return err
 	}
 
-	// Mirrors JSONStore updateData: only the Title is appended; other fields
-	// default (empty/false), matching the JSON behaviour.
+	// Mirrors JSONStore updateData: an appended item carries its title and its
+	// description (both come straight from the request), while the remaining
+	// fields keep their zero value until the CLI can set them.
 	for i, item := range newItems {
-		appended := &todo.Item{Title: item.Title}
+		appended := &todo.Item{Title: item.Title, Description: item.Description}
 		if err := insertItem(ctx, tx, listID, nextPos+i, appended); err != nil {
 			return err
 		}
@@ -310,7 +311,15 @@ func (s *PgStore) UpdateTodoListData(ctx context.Context, title string, newItems
 	return tx.Commit(ctx)
 }
 
-func (s *PgStore) UpdateTodoListItemData(ctx context.Context, title string, itemIndex int32, newTitle string) error {
+// UpdateTodoListItemData applies a partial edit to one item, writing only the
+// fields set in update. The SET clause is assembled from the non-nil fields, so
+// an omitted field is never written back and cannot clobber a value the caller
+// did not intend to touch.
+func (s *PgStore) UpdateTodoListItemData(ctx context.Context, title string, itemIndex int32, update ItemUpdate) error {
+	if update.IsEmpty() {
+		return nil
+	}
+
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return err
@@ -337,10 +346,25 @@ func (s *PgStore) UpdateTodoListItemData(ctx context.Context, title string, item
 		return nil
 	}
 
-	if _, err := tx.Exec(ctx,
-		`UPDATE items SET title = $1 WHERE list_id = $2 AND position = $3`,
-		newTitle, listID, itemIndex,
-	); err != nil {
+	setClauses := []string{}
+	args := []any{}
+	if update.Title != nil {
+		args = append(args, *update.Title)
+		setClauses = append(setClauses, fmt.Sprintf("title = $%d", len(args)))
+	}
+	if update.Description != nil {
+		args = append(args, *update.Description)
+		setClauses = append(setClauses, fmt.Sprintf("description = $%d", len(args)))
+	}
+	args = append(args, listID, itemIndex)
+
+	// The placeholders are generated from the fixed field list above, never from
+	// caller input; only the values travel as bound parameters.
+	query := fmt.Sprintf(
+		`UPDATE items SET %s WHERE list_id = $%d AND position = $%d`,
+		strings.Join(setClauses, ", "), len(args)-1, len(args),
+	)
+	if _, err := tx.Exec(ctx, query, args...); err != nil {
 		return err
 	}
 

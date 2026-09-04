@@ -64,7 +64,13 @@ service TodoListService {
 message UpdateTodoListItemRequest {
     string title = 1;
     int32 item_index = 2;
-    string new_title = 3;
+    // new_title and new_description use proto3 field presence (optional): an
+    // ABSENT field leaves the item's current value untouched, while a field set
+    // to "" explicitly clears it. Presence is what makes the REST PATCH on
+    // /v1/lists/{title}/items a real partial update -- editing a description
+    // must not silently wipe the title, and vice versa.
+    optional string new_title = 3;
+    optional string new_description = 4;
 }
 
 message UpdateTodoListItemResponse {
