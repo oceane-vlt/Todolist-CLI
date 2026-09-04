@@ -13,7 +13,7 @@ import (
 )
 
 var showCmd = &cobra.Command{
-	Use:   "show",
+	Use:   "show <list>",
 	Short: "Show the items of a todo list",
 	Long: `Show the items of a todo list.
 

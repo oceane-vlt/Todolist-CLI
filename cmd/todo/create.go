@@ -11,7 +11,7 @@ import (
 )
 
 var createCmd = &cobra.Command{
-	Use:   "create",
+	Use:   "create <list> [item...]",
 	Short: "Create a new todo list",
 	Long: `Create a new todo list. You can:
   - Create an empty list: todo create mylist

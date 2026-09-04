@@ -11,7 +11,7 @@ import (
 )
 
 var deleteCmd = &cobra.Command{
-	Use:   "delete",
+	Use:   "delete <list> [list...]",
 	Short: "Delete one or more todo lists",
 	Long: `Delete one or more todo lists. Usage:
   - Delete a single list: todo delete mylist

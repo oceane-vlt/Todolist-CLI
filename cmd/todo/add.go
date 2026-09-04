@@ -12,7 +12,7 @@ import (
 )
 
 var addCmd = &cobra.Command{
-	Use:   "add",
+	Use:   "add <list> <item> [item...]",
 	Short: "add items to a todo list",
 	Long: `Add items to a todo list.
 	Usage:

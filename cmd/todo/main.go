@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"os"
 
@@ -21,13 +20,17 @@ const envServerEndpoint = "TODO_SERVER_ENDPOINT"
 const defaultServerEndpoint = "127.0.0.1:50051"
 
 var (
+	// No Run: a root command with subcommands and an empty Run silently prints
+	// nothing when invoked bare. Leaving it out makes Cobra show the help, which
+	// is the only useful answer to someone typing "todo" on its own.
 	rootCmd = &cobra.Command{
 		Use:   "todo",
-		Short: "todo cli",
-		Long:  `cli to manage yours todo lists`,
-		Run: func(cmd *cobra.Command, args []string) {
+		Short: "Manage your todo lists from the command line",
+		Long: `todo manages todo lists from the command line.
 
-		},
+Each item has a short title and an optional longer description. "todo show"
+opens an interactive browser where you can read descriptions, tick items with x
+and complete them with ctrl+s.`,
 	}
 
 	grpcClient todo.TodoListServiceClient
@@ -43,8 +46,12 @@ func serverEndpoint() string {
 }
 
 func execute() {
+	// Cobra has already printed the error and the usage by the time Execute
+	// returns, so printing it again here only duplicated it on screen. What was
+	// missing is the exit status: a usage error used to leave the process at 0,
+	// which made every failure invisible to a script or a CI step.
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
+		os.Exit(1)
 	}
 }
 

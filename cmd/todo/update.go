@@ -16,7 +16,7 @@ import (
 )
 
 var updateCmd = &cobra.Command{
-	Use:   "update",
+	Use:   "update <list>",
 	Short: "update an item from a todo list",
 	Long: `Update item from todo list.
 	Usage:
