@@ -90,7 +90,7 @@ This file tracks planned features and improvements for the todolist-cli project.
 
 #### SHOW
 - [ ] *Show* command with no arguments should display existing todo lists and ask user to enter the list they want to view
-- [x] Add a verbose option to display only the title or full details
+- [x] Add a verbose option to display only the title or full details (interactive browser + `--details`)
 - [x] We can search with case-insensitive (make sur there is no issue when deleting, creating, etc)
 - [x] Command run with non existing list should display an error
 - [x] Only show the 7 first completed items (shows first 7, use -H for all)
@@ -103,13 +103,13 @@ This file tracks planned features and improvements for the todolist-cli project.
 - [ ] Ask for conformation before deleting
 
 #### COMPLETE
-- [ ] Show the updated list once the items have been marked complete 
+- [x] Show the updated list once the items have been marked complete (the browser updates in place; `complete` was folded into `todo show`)
 - [x] If the index doesn't exist → ask again to the user
 
 #### ADD
 - [ ] If the user doesn't add the new items as arguments of the command → ask the user to add the elements they want → scan stdin → call updateItem with the scanned list
 - [x] Print the list once updated
-- [ ] Enable create elements with description
+- [x] Enable create elements with description (`todo add <list> <item> -d "..."`, and `todo update` edits it)
 
 ## Testing
 - [x] Add table-driven tests for JSON parsing logic
