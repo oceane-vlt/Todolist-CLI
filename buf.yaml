@@ -4,7 +4,7 @@
 # Lancer `buf dep update` une fois pour figer buf.lock, puis `make proto-gateway`.
 version: v2
 modules:
-  - path: proto
+  - path: .
 deps:
   - buf.build/googleapis/googleapis
 lint:

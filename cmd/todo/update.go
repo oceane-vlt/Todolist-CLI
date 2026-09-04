@@ -90,7 +90,7 @@ var updateCmd = &cobra.Command{
 			updateRequest := &todo.UpdateTodoListItemRequest{
 				Title:     args[0],
 				ItemIndex: actualIndex,
-				NewTitle:  newTitle,
+				NewTitle:  &newTitle,
 			}
 
 			_, error := grpcClient.UpdateTodoListItem(ctx, updateRequest)

@@ -67,7 +67,9 @@ func TestUpdateData(t *testing.T) {
 			expectError: false,
 		},
 		{
-			name: "add item with all fields",
+			// An appended item keeps its title and description; the fields the CLI
+			// cannot set yet (completed, due date, priority) are still dropped.
+			name: "add item keeps title and description, drops the rest",
 			listToUpdate: []TodoItem{
 				{Title: "Existing task"},
 			},
@@ -82,7 +84,7 @@ func TestUpdateData(t *testing.T) {
 			},
 			expectedResult: []TodoItem{
 				{Title: "Existing task"},
-				{Title: "New task"},
+				{Title: "New task", Description: "Detailed description"},
 			},
 			expectError: false,
 		},

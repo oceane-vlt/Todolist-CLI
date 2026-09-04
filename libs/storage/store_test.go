@@ -104,7 +104,7 @@ func TestJSONStoreUpdateItem(t *testing.T) {
 	if err := s.CreateTodoList(ctx, "work", []*todo.Item{{Title: "old"}}); err != nil {
 		t.Fatalf("CreateTodoList() error: %v", err)
 	}
-	if err := s.UpdateTodoListItemData(ctx, "work", 0, "new"); err != nil {
+	if err := s.UpdateTodoListItemData(ctx, "work", 0, titleUpdate("new")); err != nil {
 		t.Fatalf("UpdateTodoListItemData() error: %v", err)
 	}
 
@@ -115,4 +115,15 @@ func TestJSONStoreUpdateItem(t *testing.T) {
 	if len(got) != 1 || got[0].Title != "new" {
 		t.Errorf("after rename, got %+v, want title=new", got)
 	}
+}
+
+// titleUpdate builds an ItemUpdate that changes only the title, the common case
+// in these tests.
+func titleUpdate(title string) ItemUpdate {
+	return ItemUpdate{Title: &title}
+}
+
+// descriptionUpdate builds an ItemUpdate that changes only the description.
+func descriptionUpdate(description string) ItemUpdate {
+	return ItemUpdate{Description: &description}
 }
