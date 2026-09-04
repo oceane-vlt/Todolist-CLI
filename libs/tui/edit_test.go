@@ -15,19 +15,15 @@ func typeRunes(s string) tea.KeyMsg {
 	return tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(s)}
 }
 
-// send drives the model through one message, keeping it a concrete editModel.
+// send drives the form through one message.
 func send(t *testing.T, m editModel, msg tea.Msg) editModel {
 	t.Helper()
-	next, _ := m.Update(msg)
-	got, ok := next.(editModel)
-	if !ok {
-		t.Fatalf("Update returned %T, want editModel", next)
-	}
-	return got
+	next, _ := m.update(msg)
+	return next
 }
 
 func TestEditFocusCycles(t *testing.T) {
-	m := newEditModel("title", "description")
+	m := newEditModel(headingEdit, "title", "description")
 	if m.focus != fieldTitle {
 		t.Fatalf("focus starts at %d, want the title field", m.focus)
 	}
@@ -53,7 +49,7 @@ func TestEditFocusCycles(t *testing.T) {
 // TestEditEnterLeavesTitleButNotDescription pins the asymmetry: Enter is
 // "field done" on a single-line input, and a real newline in the text area.
 func TestEditEnterLeavesTitleButNotDescription(t *testing.T) {
-	m := newEditModel("title", "one")
+	m := newEditModel(headingEdit, "title", "one")
 
 	m = send(t, m, key(tea.KeyEnter))
 	if m.focus != fieldDescription {
@@ -70,10 +66,10 @@ func TestEditEnterLeavesTitleButNotDescription(t *testing.T) {
 }
 
 func TestEditSaveRequiresATitle(t *testing.T) {
-	m := newEditModel("", "a description")
+	m := newEditModel(headingEdit, "", "a description")
 
 	m = send(t, m, key(tea.KeyCtrlS))
-	if m.saved {
+	if m.saved || m.done {
 		t.Error("saving with a blank title should be refused")
 	}
 	if m.message == "" {
@@ -88,20 +84,37 @@ func TestEditSaveRequiresATitle(t *testing.T) {
 	}
 }
 
+// TestEditSaveAndCancel checks both outcomes report `done`, which is how the
+// browser knows to close the form and what to do next. Ctrl+C is absent: the
+// browser intercepts it before the form ever sees it.
 func TestEditSaveAndCancel(t *testing.T) {
-	saved := send(t, newEditModel("title", "desc"), key(tea.KeyCtrlS))
-	if !saved.saved {
-		t.Error("Ctrl+S with a title should save")
+	saved := send(t, newEditModel(headingEdit, "title", "desc"), key(tea.KeyCtrlS))
+	if !saved.done || !saved.saved {
+		t.Errorf("Ctrl+S with a title: done=%v saved=%v, want both true", saved.done, saved.saved)
 	}
 
-	cancelled := send(t, newEditModel("title", "desc"), key(tea.KeyEsc))
-	if cancelled.saved {
-		t.Error("Esc should cancel")
+	cancelled := send(t, newEditModel(headingEdit, "title", "desc"), key(tea.KeyEsc))
+	if !cancelled.done || cancelled.saved {
+		t.Errorf("Esc: done=%v saved=%v, want done and not saved", cancelled.done, cancelled.saved)
 	}
 
-	interrupted := send(t, newEditModel("title", "desc"), key(tea.KeyCtrlC))
-	if interrupted.saved {
-		t.Error("Ctrl+C should cancel")
+	// A refused save must NOT report done, or the browser would close the form
+	// and throw the edit away.
+	blank := send(t, newEditModel(headingEdit, "", "desc"), key(tea.KeyCtrlS))
+	if blank.done {
+		t.Error("a refused save must not report done")
+	}
+}
+
+// TestEditValuesAreTrimmed covers what the browser actually reads back.
+func TestEditValuesAreTrimmed(t *testing.T) {
+	m := newEditModel(headingEdit, "  spaced  ", "\n\n  body  \n\n")
+	title, description := m.values()
+	if title != "spaced" {
+		t.Errorf("title = %q, want %q", title, "spaced")
+	}
+	if description != "body" {
+		t.Errorf("description = %q, want %q", description, "body")
 	}
 }
 
@@ -113,7 +126,7 @@ func TestEditViewFitsTerminalHeight(t *testing.T) {
 	// Down to minFormHeight, where the compact layout is at its smallest.
 	for _, height := range []int{minFormHeight, 6, 8, 10, 12, 15, 24, 40, 60} {
 		for _, desc := range []string{"", "short", long} {
-			m := newEditModel("a title", desc)
+			m := newEditModel(headingEdit, "a title", desc)
 			m.height = height
 			m.width = 60
 			m.layout()
@@ -137,21 +150,21 @@ func TestEditViewFitsTerminalHeight(t *testing.T) {
 // fitting the frame matters more than the comfort of the text area — an
 // overflowing frame corrupts the display, a one-line one merely scrolls.
 func TestEditLayoutClampsDescriptionHeight(t *testing.T) {
-	roomy := newEditModel("t", "d")
+	roomy := newEditModel(headingEdit, "t", "d")
 	roomy.height = editChromeLines + minDescriptionHeight
 	roomy.layout()
 	if got := roomy.descArea.Height(); got < minDescriptionHeight {
 		t.Errorf("roomy layout gave a %d-line description area, want at least %d", got, minDescriptionHeight)
 	}
 
-	tiny := newEditModel("t", "d")
+	tiny := newEditModel(headingEdit, "t", "d")
 	tiny.height = 4
 	tiny.layout()
 	if got := tiny.descArea.Height(); got < 1 {
 		t.Errorf("tiny terminal gave a %d-line description area, want at least 1", got)
 	}
 
-	huge := newEditModel("t", "d")
+	huge := newEditModel(headingEdit, "t", "d")
 	huge.height = 300
 	huge.layout()
 	if got := huge.descArea.Height(); got > maxDescriptionHeight {
@@ -162,14 +175,14 @@ func TestEditLayoutClampsDescriptionHeight(t *testing.T) {
 // TestEditCompactLayoutKicksIn documents where the layout switches, so the two
 // chrome counts and the switch condition cannot drift apart unnoticed.
 func TestEditCompactLayoutKicksIn(t *testing.T) {
-	roomy := newEditModel("t", "d")
+	roomy := newEditModel(headingEdit, "t", "d")
 	roomy.height = editChromeLines + minDescriptionHeight
 	roomy.layout()
 	if roomy.compact {
 		t.Errorf("height=%d should still use the roomy layout", roomy.height)
 	}
 
-	compact := newEditModel("t", "d")
+	compact := newEditModel(headingEdit, "t", "d")
 	compact.height = editChromeLines + minDescriptionHeight - 1
 	compact.layout()
 	if !compact.compact {
@@ -180,7 +193,7 @@ func TestEditCompactLayoutKicksIn(t *testing.T) {
 // TestEditCompactShowsMessageInsteadOfHints covers the row the compact layout
 // saves by sharing one line between the two.
 func TestEditCompactShowsMessageInsteadOfHints(t *testing.T) {
-	m := newEditModel("", "d")
+	m := newEditModel(headingEdit, "", "d")
 	m.height = minFormHeight
 	m.layout()
 	if !m.compact {

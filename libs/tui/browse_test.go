@@ -1,10 +1,12 @@
 package tui
 
 import (
+	"errors"
 	"strings"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/oceane-vlt/todolist/libs/ui"
 
 	todo "github.com/oceane-vlt/todolist/proto"
 )
@@ -92,6 +94,11 @@ func TestWrap(t *testing.T) {
 // newTestModel builds a model over n items, every other one carrying a
 // description, which is enough to exercise the marker and folding logic.
 func newTestModel(n int) model {
+	return newBrowseModel(newTestItems(n), "test")
+}
+
+// newTestItems builds n items, every other one carrying a description.
+func newTestItems(n int) []*todo.Item {
 	items := make([]*todo.Item, n)
 	for i := range items {
 		items[i] = &todo.Item{Title: "item"}
@@ -99,7 +106,7 @@ func newTestModel(n int) model {
 			items[i].Description = "a description long enough to wrap onto several lines when folded open"
 		}
 	}
-	return newBrowseModel(items, "test")
+	return items
 }
 
 func TestHasDescription(t *testing.T) {
@@ -474,4 +481,347 @@ func stripANSI(s string) string {
 		i++
 	}
 	return b.String()
+}
+
+// newEditableTestModel wires a browser to a recording editor, so tests can
+// assert what would have been sent to the server.
+func newEditableTestModel(n int, err error) (model, *[]editCall) {
+	calls := &[]editCall{}
+	m := newBrowseModel(newTestItems(n), "test")
+	m.editor = func(index int, title, description *string) error {
+		*calls = append(*calls, editCall{index: index, title: title, description: description})
+		return err
+	}
+	m.adder = func(title, description string) error {
+		*calls = append(*calls, editCall{index: -1, title: &title, description: &description})
+		return err
+	}
+	return m, calls
+}
+
+type editCall struct {
+	index       int
+	title       *string
+	description *string
+}
+
+// drain runs a command and feeds its message back, the way the runtime would.
+func drain(t *testing.T, m model, cmd tea.Cmd) model {
+	t.Helper()
+	if cmd == nil {
+		return m
+	}
+	return sendBrowse(t, m, cmd())
+}
+
+// TestEditOpensAndReturnsToTheList is the core of the flow: saving an edit must
+// land the user back in the list, not drop them out of the browser.
+func TestEditOpensAndReturnsToTheList(t *testing.T) {
+	m, calls := newEditableTestModel(3, nil)
+	m.cursor = 1
+
+	m = sendBrowse(t, m, browseKey("e"))
+	if m.mode != modeEdit {
+		t.Fatal("e should open the form")
+	}
+	if m.editing != 1 {
+		t.Errorf("editing item %d, want the one under the cursor (1)", m.editing)
+	}
+
+	// Change the title, then save.
+	m = sendBrowse(t, m, typeRunes("!"))
+	next, cmd := m.Update(browseKey("ctrl+s"))
+	m = next.(model)
+
+	if m.mode != modeList {
+		t.Error("saving should return to the list, not close the browser")
+	}
+	m = drain(t, m, cmd)
+
+	if len(*calls) != 1 {
+		t.Fatalf("editor called %d times, want once", len(*calls))
+	}
+	if (*calls)[0].index != 1 {
+		t.Errorf("editor got index %d, want 1", (*calls)[0].index)
+	}
+	// Only the title changed, so only the title travels.
+	if (*calls)[0].title == nil {
+		t.Error("the changed title should be sent")
+	}
+	if (*calls)[0].description != nil {
+		t.Error("an untouched description must not be sent")
+	}
+	if m.items[1].Title != *(*calls)[0].title {
+		t.Errorf("the row still shows %q, want the saved title", m.items[1].Title)
+	}
+}
+
+// TestEditCancelReturnsWithoutSaving covers the other exit from the form.
+func TestEditCancelReturnsWithoutSaving(t *testing.T) {
+	m, calls := newEditableTestModel(3, nil)
+	before := m.items[0].Title
+
+	m = sendBrowse(t, m, browseKey("e"))
+	m = sendBrowse(t, m, typeRunes("zzz"))
+	m = sendBrowse(t, m, browseKey("esc"))
+
+	if m.mode != modeList {
+		t.Error("esc should return to the list")
+	}
+	if len(*calls) != 0 {
+		t.Error("cancelling must not call the editor")
+	}
+	if m.items[0].Title != before {
+		t.Errorf("title became %q, want it untouched", m.items[0].Title)
+	}
+}
+
+// TestEditWithNoChangeSkipsTheRoundTrip: an unchanged form should not pretend to
+// save, nor talk to the server.
+func TestEditWithNoChangeSkipsTheRoundTrip(t *testing.T) {
+	m, calls := newEditableTestModel(3, nil)
+
+	m = sendBrowse(t, m, browseKey("e"))
+	next, cmd := m.Update(browseKey("ctrl+s"))
+	m = next.(model)
+
+	if cmd != nil {
+		t.Error("an unchanged edit should produce no command")
+	}
+	if len(*calls) != 0 {
+		t.Error("an unchanged edit must not call the editor")
+	}
+	if m.message != "" {
+		t.Errorf("message = %q, want none for a no-op edit", m.message)
+	}
+}
+
+// TestEditFailureIsSurfacedAndNotApplied: a failed save must not leave the list
+// showing text the server never accepted.
+func TestEditFailureIsSurfacedAndNotApplied(t *testing.T) {
+	m, _ := newEditableTestModel(3, errors.New("connection refused"))
+	before := m.items[0].Title
+
+	m = sendBrowse(t, m, browseKey("e"))
+	m = sendBrowse(t, m, typeRunes("!"))
+	next, cmd := m.Update(browseKey("ctrl+s"))
+	m = drain(t, next.(model), cmd)
+
+	if m.items[0].Title != before {
+		t.Errorf("a failed save changed the row to %q", m.items[0].Title)
+	}
+	if !strings.Contains(m.message, "connection refused") {
+		t.Errorf("message = %q, want the reason surfaced", m.message)
+	}
+}
+
+// TestEditPreservesMarksAndCursor is why the form is embedded rather than run as
+// its own program: an edit must not cost the user their ticks or their place.
+func TestEditPreservesMarksAndCursor(t *testing.T) {
+	m, _ := newEditableTestModel(6, nil)
+	m.cursor = 4
+	m = sendBrowse(t, m, browseKey("x")) // tick item 4
+	m.cursor = 2
+	m = sendBrowse(t, m, browseKey("x")) // tick item 2
+
+	m = sendBrowse(t, m, browseKey("e"))
+	m = sendBrowse(t, m, typeRunes("!"))
+	next, cmd := m.Update(browseKey("ctrl+s"))
+	m = drain(t, next.(model), cmd)
+
+	if m.cursor != 2 {
+		t.Errorf("cursor moved to %d, want it left at 2", m.cursor)
+	}
+	got := m.markedIndices()
+	if len(got) != 2 || got[0] != 2 || got[1] != 4 {
+		t.Errorf("marks = %v, want [2 4] preserved across the edit", got)
+	}
+}
+
+// TestEditKeyIsInertWithoutAnEditor keeps a read-only browser honest: the key
+// says so instead of doing nothing.
+func TestEditKeyIsInertWithoutAnEditor(t *testing.T) {
+	m := sendBrowse(t, newTestModel(3), browseKey("e"))
+	if m.mode != modeList {
+		t.Error("e must not open the form when no editor was supplied")
+	}
+	if m.message == "" {
+		t.Error("e should explain that editing is unavailable")
+	}
+}
+
+// TestClearingADescriptionFoldsTheRow: an unfolded row whose description was
+// just emptied cannot stay unfolded.
+func TestClearingADescriptionFoldsTheRow(t *testing.T) {
+	m, _ := newEditableTestModel(3, nil)
+	m.expanded[0] = true
+
+	m = m.handleEditApplied(editAppliedMsg{index: 0, title: "kept", description: ""})
+	if m.expanded[0] {
+		t.Error("a row with no description left must not stay unfolded")
+	}
+}
+
+// TestMessageStyleMatchesItsNature guards against reporting a success in the
+// error colour, which reads as a failure.
+func TestMessageStyleMatchesItsNature(t *testing.T) {
+	m, _ := newEditableTestModel(3, nil)
+
+	saved := m.handleEditApplied(editAppliedMsg{index: 0, title: "kept", description: "kept"})
+	if saved.messageIsError {
+		t.Error("a successful save must not be flagged as an error")
+	}
+	if !strings.Contains(saved.footer(), ui.BoldGreen) {
+		t.Error("a successful save should use the success style")
+	}
+
+	failed := m.handleEditApplied(editAppliedMsg{index: 0, err: errors.New("boom")})
+	if !failed.messageIsError {
+		t.Error("a failed save must be flagged as an error")
+	}
+	if !strings.Contains(failed.footer(), ui.BoldRed) {
+		t.Error("a failed save should use the error style")
+	}
+}
+
+// TestAddOpensAnEmptyForm: "a" must not inherit the focused item's text.
+func TestAddOpensAnEmptyForm(t *testing.T) {
+	m, _ := newEditableTestModel(3, nil)
+	m.cursor = 1
+
+	m = sendBrowse(t, m, browseKey("a"))
+	if m.mode != modeAdd {
+		t.Fatal("a should open the form in add mode")
+	}
+	title, description := m.edit.values()
+	if title != "" || description != "" {
+		t.Errorf("the new-item form starts with %q / %q, want both empty", title, description)
+	}
+	if !strings.Contains(m.View(), headingAdd) {
+		t.Errorf("the form should be headed %q so an add is not mistaken for an edit", headingAdd)
+	}
+}
+
+// TestAddAppendsAndFocusesTheNewItem: after saving, the row must exist and the
+// cursor must be on it, so the user sees what they just created.
+func TestAddAppendsAndFocusesTheNewItem(t *testing.T) {
+	m, calls := newEditableTestModel(3, nil)
+	before := len(m.items)
+
+	m = sendBrowse(t, m, browseKey("a"))
+	m = sendBrowse(t, m, typeRunes("new task"))
+	next, cmd := m.Update(browseKey("ctrl+s"))
+	m = drain(t, next.(model), cmd)
+
+	if len(*calls) != 1 || (*calls)[0].index != -1 {
+		t.Fatalf("expected exactly one add call, got %+v", *calls)
+	}
+	if len(m.items) != before+1 {
+		t.Fatalf("list holds %d items, want %d", len(m.items), before+1)
+	}
+	if got := m.items[len(m.items)-1].Title; got != "new task" {
+		t.Errorf("appended item title = %q, want %q", got, "new task")
+	}
+	if m.cursor != len(m.items)-1 {
+		t.Errorf("cursor at %d, want it on the new last item %d", m.cursor, len(m.items)-1)
+	}
+	if m.messageIsError {
+		t.Error("a successful add must not be reported as an error")
+	}
+}
+
+// TestAddRequiresATitle: an empty form cannot be saved, and must stay open.
+func TestAddRequiresATitle(t *testing.T) {
+	m, calls := newEditableTestModel(3, nil)
+
+	m = sendBrowse(t, m, browseKey("a"))
+	next, cmd := m.Update(browseKey("ctrl+s"))
+	m = next.(model)
+
+	if m.mode != modeAdd {
+		t.Error("a refused save must leave the form open")
+	}
+	if cmd != nil || len(*calls) != 0 {
+		t.Error("a refused save must not reach the adder")
+	}
+}
+
+// TestAddFailureIsSurfacedAndNotApplied: a rejected add must not leave a row the
+// server never accepted.
+func TestAddFailureIsSurfacedAndNotApplied(t *testing.T) {
+	m, _ := newEditableTestModel(3, errors.New("connection refused"))
+	before := len(m.items)
+
+	m = sendBrowse(t, m, browseKey("a"))
+	m = sendBrowse(t, m, typeRunes("ghost"))
+	next, cmd := m.Update(browseKey("ctrl+s"))
+	m = drain(t, next.(model), cmd)
+
+	if len(m.items) != before {
+		t.Errorf("a failed add left %d items, want %d", len(m.items), before)
+	}
+	if !strings.Contains(m.message, "connection refused") {
+		t.Errorf("message = %q, want the reason surfaced", m.message)
+	}
+	if !m.messageIsError {
+		t.Error("a failed add should be styled as an error")
+	}
+}
+
+// TestAddCancelChangesNothing covers the escape route.
+func TestAddCancelChangesNothing(t *testing.T) {
+	m, calls := newEditableTestModel(3, nil)
+	before := len(m.items)
+
+	m = sendBrowse(t, m, browseKey("a"))
+	m = sendBrowse(t, m, typeRunes("discarded"))
+	m = sendBrowse(t, m, browseKey("esc"))
+
+	if m.mode != modeList {
+		t.Error("esc should return to the list")
+	}
+	if len(*calls) != 0 || len(m.items) != before {
+		t.Error("cancelling an add must change nothing")
+	}
+}
+
+// TestAddKeyIsInertWithoutAnAdder mirrors the editor case.
+func TestAddKeyIsInertWithoutAnAdder(t *testing.T) {
+	m := sendBrowse(t, newTestModel(3), browseKey("a"))
+	if m.mode != modeList {
+		t.Error("a must not open the form when no adder was supplied")
+	}
+	if m.message == "" || !m.messageIsError {
+		t.Error("a should explain that adding is unavailable")
+	}
+}
+
+// TestHintFallsBackByWidth pins the tiering: the widest hint that fits wins, and
+// the alternate keys are what gets given up first.
+func TestHintFallsBackByWidth(t *testing.T) {
+	widest := browseHints[0]
+	if got := hintFor(runeLen(widest)); got != widest {
+		t.Errorf("at exactly its own width, hintFor returned %q", got)
+	}
+	if !strings.Contains(widest, "x/space") || !strings.Contains(widest, "→/enter") {
+		t.Error("the widest hint should spell out the alternate keys, as users asked")
+	}
+
+	// One cell too narrow: step down, never wrap.
+	if got := hintFor(runeLen(widest) - 1); got == widest {
+		t.Error("hintFor should step down when the widest hint does not fit")
+	}
+
+	// Every tier must be strictly shorter than the one before it, or the ladder
+	// would have a rung that never gets used.
+	for i := 1; i < len(browseHints); i++ {
+		if runeLen(browseHints[i]) >= runeLen(browseHints[i-1]) {
+			t.Errorf("hint %d is not shorter than hint %d", i, i-1)
+		}
+	}
+
+	// Absurdly narrow: still the shortest tier, and the footer clamps it.
+	if got := hintFor(1); got != browseHints[len(browseHints)-1] {
+		t.Errorf("hintFor(1) = %q, want the shortest tier", got)
+	}
 }
