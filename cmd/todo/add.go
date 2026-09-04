@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-
 	"os"
 
 	"github.com/oceane-vlt/todolist/libs/errors"
@@ -15,9 +14,13 @@ import (
 var addCmd = &cobra.Command{
 	Use:   "add",
 	Short: "add items to a todo list",
-	Long: `Update a todo list.
+	Long: `Add items to a todo list.
 	Usage:
-   - Add items to the list: todo add mylist "item1" "My item2" "my last item3"`,
+   - Add items to the list: todo add mylist "item1" "My item2" "my last item3"
+   - Add one item with a description: todo add mylist "Call the plumber" -d "Leak under the kitchen sink"
+
+The description is the long form of an item; the title stays short. 'todo show'
+lists titles only and marks the items that carry a description.`,
 	Args: cobra.MinimumNArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx := context.Background()
@@ -70,7 +73,7 @@ var addCmd = &cobra.Command{
 			errors.Showerrors(err, args)
 			os.Exit(1)
 		}
-		ui.CompleteUi(response.Items, request.Title)
+		ui.PendingList(response.Items)
 		fmt.Println()
 	},
 }

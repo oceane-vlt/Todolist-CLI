@@ -18,6 +18,19 @@ const (
 	BoldRed     = "\033[1;31m"
 	BoldGreen   = "\033[1;32m"
 	BoldBlue    = "\033[1;34m"
+
+	// Dim (SGR 2, "faint") is what pushes chrome — checkboxes, counters, key
+	// hints — behind the content. It is preferred over a fixed grey because it
+	// derives from the terminal's own foreground colour, so it stays legible in
+	// both light and dark themes, where a hard-coded grey does not.
+	Dim = "\033[2m"
+
+	// Accent is the single colour used to mark the focused row. Keeping the
+	// selection to one colour (rather than one per element) is what gives the
+	// interactive views a readable hierarchy: accent = "you are here", dim =
+	// chrome, default = content.
+	Accent     = "\033[36m"
+	BoldAccent = "\033[1;36m"
 )
 
 // Success prints a success message in green with checkmark

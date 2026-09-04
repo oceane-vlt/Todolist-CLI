@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/manifoldco/promptui"
 	"github.com/oceane-vlt/todolist/libs/errors"
+	"github.com/oceane-vlt/todolist/libs/tui"
 	"github.com/oceane-vlt/todolist/libs/ui"
 	todo "github.com/oceane-vlt/todolist/proto"
 	"github.com/spf13/cobra"
@@ -24,6 +24,15 @@ var updateCmd = &cobra.Command{
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx := context.Background()
+
+		// Editing is inherently interactive; say so up front rather than listing
+		// the items and only then failing to open the editor.
+		if !tui.IsInteractive() {
+			ui.Error("'todo update' needs a terminal (it opens an interactive editor).")
+			ui.Info(fmt.Sprintf("To change an item non-interactively, delete it and re-add it with %s.",
+				ui.Command("todo add "+args[0]+" \"<title>\" -d \"<description>\"")))
+			os.Exit(1)
+		}
 
 		request := &todo.ShowTodoListItemsRequest{
 			Title: args[0],
@@ -72,30 +81,39 @@ var updateCmd = &cobra.Command{
 			actualIndex := mapping[idx-1]
 			currentItem := response.Items[actualIndex]
 
-			fmt.Printf("\nEditing item: %s\n", currentItem.Title)
-
-			prompt := promptui.Prompt{
-				Label:   "New title",
-				Default: currentItem.Title,
-			}
-
-			newTitle, err := prompt.Run()
+			// The editor is pre-filled with the current values, so this is an edit
+			// rather than a re-entry, and clearing the description removes it.
+			edit, err := tui.EditItem(currentItem.Title, currentItem.Description)
 			if err != nil {
-				ui.Error(fmt.Sprintf("Error reading input: %v", err))
-				continue
+				ui.Error(fmt.Sprintf("Editor unavailable: %v", err))
+				return
+			}
+			if !edit.Saved {
+				ui.Info("Cancelled, nothing was changed.")
+				return
 			}
 
-			newTitle = strings.TrimSpace(newTitle)
-
+			// Send only what actually changed: the request fields carry presence,
+			// so an untouched field is left alone server-side instead of being
+			// rewritten with the value we just read back.
 			updateRequest := &todo.UpdateTodoListItemRequest{
 				Title:     args[0],
 				ItemIndex: actualIndex,
-				NewTitle:  &newTitle,
+			}
+			if edit.Title != currentItem.Title {
+				updateRequest.NewTitle = &edit.Title
+			}
+			if edit.Description != currentItem.Description {
+				updateRequest.NewDescription = &edit.Description
 			}
 
-			_, error := grpcClient.UpdateTodoListItem(ctx, updateRequest)
-			if error != nil {
-				errors.Showerrors(error, args)
+			if updateRequest.NewTitle == nil && updateRequest.NewDescription == nil {
+				ui.Info("No changes.")
+				return
+			}
+
+			if _, err := grpcClient.UpdateTodoListItem(ctx, updateRequest); err != nil {
+				errors.Showerrors(err, args)
 				return
 			}
 			ui.Success("Item updated successfully")
